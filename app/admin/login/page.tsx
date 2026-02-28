@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
-import api from "../../lib/axios"; // adjust path if needed
+import api from "../../lib/axios";
 
 interface LoginForm {
   email: string;
