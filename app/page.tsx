@@ -67,7 +67,7 @@ export default function HomePage() {
               </Link>
 
               <Link
-                href="/login"
+                href="https://www.readymealz.in/"
                 className="inline-flex items-center gap-2 px-6 py-2.5 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition shadow-sm"
               >
                 Customer Login
@@ -242,7 +242,7 @@ export default function HomePage() {
               <FiArrowRight className="h-6 w-6" />
             </Link>
             <Link
-              href="/login"
+              href="https://www.readymealz.in/"
               className="inline-flex items-center gap-3 px-10 py-5 bg-orange-800/40 border-2 border-white/60 text-white font-bold text-lg rounded-xl hover:bg-orange-800/60 transition transform hover:-translate-y-1"
             >
               <FiLogIn className="h-6 w-6" />
