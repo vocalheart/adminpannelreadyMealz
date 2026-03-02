@@ -12,13 +12,81 @@ import {
   FiCalendar,
   FiUsers,
   FiLogIn,
+  FiMenu,
 } from "react-icons/fi";
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50/70 via-white to-white">
+      {/* ────────────────────────────────────────
+          Navigation Bar
+      ──────────────────────────────────────── */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12">
+          <div className="flex items-center justify-between h-16 md:h-18">
+            {/* Logo / Brand */}
+            <Link href="/" className="flex items-center gap-2.5">
+              <div className="w-9 h-9 bg-orange-600 rounded-xl flex items-center justify-center text-white font-bold text-xl">
+                R
+              </div>
+              <span className="font-bold text-xl text-gray-900 tracking-tight">
+                ReadyMealz
+              </span>
+            </Link>
+
+            {/* Desktop Links */}
+            <div className="hidden md:flex items-center gap-8">
+              <Link
+                href="/menu"
+                className="text-gray-700 hover:text-orange-600 font-medium transition"
+              >
+                Today's Menu
+              </Link>
+              <Link
+                href="/plans"
+                className="text-gray-700 hover:text-orange-600 font-medium transition"
+              >
+                Plans & Pricing
+              </Link>
+              <Link
+                href="/about"
+                className="text-gray-700 hover:text-orange-600 font-medium transition"
+              >
+                About
+              </Link>
+            </div>
+
+            {/* Auth Buttons */}
+            <div className="flex items-center gap-4">
+              <Link
+                href="/admin/login"
+                className="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 text-orange-700 font-semibold rounded-lg border border-orange-200 hover:bg-orange-50 transition"
+              >
+                <FiLogIn className="h-4 w-4" />
+                Admin Login
+              </Link>
+
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition shadow-sm"
+              >
+                Customer Login
+              </Link>
+
+              {/* Mobile menu button (optional - can expand later) */}
+              <button className="md:hidden p-2 text-gray-700 hover:text-orange-600">
+                <FiMenu className="h-6 w-6" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Add top padding so content isn't hidden under fixed navbar */}
+      <div className="pt-20 md:pt-24"></div>
+
       {/* Hero Section */}
-      <section className="relative pt-16 pb-24 md:pt-24 md:pb-32 overflow-hidden">
+      <section className="relative pt-8 pb-20 md:pt-16 md:pb-32 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-orange-100/40 to-amber-100/30 -z-10" />
 
         <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12">
@@ -178,7 +246,7 @@ export default function HomePage() {
               className="inline-flex items-center gap-3 px-10 py-5 bg-orange-800/40 border-2 border-white/60 text-white font-bold text-lg rounded-xl hover:bg-orange-800/60 transition transform hover:-translate-y-1"
             >
               <FiLogIn className="h-6 w-6" />
-              Login to Account
+              Customer Login
             </Link>
           </div>
         </div>

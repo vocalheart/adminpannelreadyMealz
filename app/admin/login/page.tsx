@@ -10,7 +10,6 @@ interface LoginForm {
   email: string;
   password: string;
 }
-
 interface LoginResponse {
   success: boolean;
   message: string;
@@ -35,7 +34,7 @@ export default function AdminLogin() {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  // 🔐 AUTO REDIRECT IF ALREADY LOGGED IN
+  //  AUTO REDIRECT IF ALREADY LOGGED IN
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
       router.replace("/admin/dashboard");
@@ -86,10 +85,10 @@ export default function AdminLogin() {
         path: "/",
       });
 
-      // 🔄 Refresh global admin state (important)
+      //  Refresh global admin state (important)
       await refreshAdmin();
 
-      // 🚀 Redirect to dashboard
+      //  Redirect to dashboard
       router.replace("/admin/dashboard");
       router.refresh();
     } catch (err: any) {
@@ -102,8 +101,7 @@ export default function AdminLogin() {
       setLoading(false);
     }
   };
-
-  // ⏳ While checking auth, prevent flicker
+  // While checking auth, prevent flicker
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -113,7 +111,6 @@ export default function AdminLogin() {
       </div>
     );
   }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-amber-50 px-4 sm:px-6">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-orange-100 p-6 sm:p-8 md:p-10">
