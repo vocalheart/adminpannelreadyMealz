@@ -1,19 +1,42 @@
+// app/admin/categories/page.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import AdminProtectedRoute from "@/app/components/AdminProtectedRoute";
-import api from "../../lib/axios"; // adjust path if needed
+import api from "@/app/lib/axios"; // adjust path if needed
+import {
+  FaPlus,
+  FaEdit,
+  FaTrashAlt,
+  FaSearch,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaFolder,
+  FaTags,
+} from "react-icons/fa";
 
 interface Category {
   _id: string;
   name: string;
   slug: string;
   description: string;
-};
+}
+
+interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  next: string | null;
+  previous: string | null;
+}
+
 export default function CategoryManagement() {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [filteredCategories, setFilteredCategories] = useState<Category[]>([]);
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
+
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editCategory, setEditCategory] = useState<Category | null>(null);
@@ -33,16 +56,27 @@ export default function CategoryManagement() {
     id: null,
   });
 
-  /* =========================
-     FETCH CATEGORIES (with pagination support later if needed)
-  ========================= */
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async (page: number = 1, search: string = "") => {
     try {
       setFetchLoading(true);
-      const res = await api.get("/category?limit=1000"); // increase limit temporarily or implement pagination
-      const data = res.data.categories || [];
-      setCategories(data);
-      setFilteredCategories(data);
+      setCurrentPage(page);
+
+      const params: any = { page, limit: 10 };
+      if (search.trim()) params.search = search.trim();
+
+      const res = await api.get("/category", { params });
+
+      if (res.data.success) {
+        setCategories(res.data.categories || []);
+        setPagination({
+          page: res.data.page,
+          limit: res.data.limit,
+          total: res.data.total,
+          totalPages: res.data.totalPages,
+          next: res.data.pagination?.next || null,
+          previous: res.data.pagination?.previous || null,
+        });
+      }
     } catch (error: any) {
       const msg =
         error?.response?.data?.message ||
@@ -52,33 +86,20 @@ export default function CategoryManagement() {
     } finally {
       setFetchLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchCategories();
   }, []);
 
-  /* =========================
-     CLIENT-SIDE SEARCH FILTER
-  ========================= */
   useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFilteredCategories(categories);
-      return;
-    }
+    fetchCategories(currentPage, searchTerm);
+  }, [currentPage, fetchCategories]);
 
-    const term = searchTerm.toLowerCase().trim();
-    const filtered = categories.filter(
-      (cat) =>
-        cat.name.toLowerCase().includes(term) ||
-        cat.slug.toLowerCase().includes(term)
-    );
-    setFilteredCategories(filtered);
-  }, [searchTerm, categories]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCurrentPage(1);
+      fetchCategories(1, searchTerm);
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [searchTerm, fetchCategories]);
 
-  /* =========================
-     FORM HANDLERS
-  ========================= */
   const handleFormChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -147,7 +168,7 @@ export default function CategoryManagement() {
           "success"
         );
         closeModal();
-        fetchCategories();
+        fetchCategories(currentPage, searchTerm);
       } else {
         showMessage(res.data.message || "Operation failed", "error");
       }
@@ -157,27 +178,23 @@ export default function CategoryManagement() {
         error?.message ||
         "Something went wrong. Please try again.";
       showMessage(errMsg, "error");
-      console.error("SAVE CATEGORY ERROR:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  /* =========================
-     DELETE with better feedback
-  ========================= */
   const openDeleteModal = (id: string) => setDeleteModal({ open: true, id });
 
   const confirmDelete = async () => {
     if (!deleteModal.id) return;
 
     try {
-      setLoading(true); // reuse loading state
+      setLoading(true);
       const res = await api.delete(`/category/${deleteModal.id}`);
 
       if (res.data.success) {
         showMessage("Category deleted successfully", "success");
-        fetchCategories();
+        fetchCategories(currentPage, searchTerm);
       } else {
         showMessage(res.data.message || "Delete operation failed", "error");
       }
@@ -196,7 +213,6 @@ export default function CategoryManagement() {
       }
 
       showMessage(errMsg, "error");
-      console.error("DELETE CATEGORY ERROR:", error);
     } finally {
       setLoading(false);
       setDeleteModal({ open: false, id: null });
@@ -205,133 +221,158 @@ export default function CategoryManagement() {
 
   const showMessage = (text: string, type: "success" | "error") => {
     setMessage({ text, type });
-    // longer display for errors
     setTimeout(() => setMessage(null), type === "error" ? 7000 : 5000);
+  };
+
+  const goToPage = (page: number) => {
+    if (page < 1 || (pagination && page > pagination.totalPages)) return;
+    setCurrentPage(page);
   };
 
   return (
     <AdminProtectedRoute>
-      <div className="min-h-screen bg-gray-50 py-6 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-              Manage Categories
-            </h1>
+      <div className="min-h-screen bg-gray-50/60 pb-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 mb-8">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+                Category Management
+              </h1>
+              <p className="mt-1.5 text-gray-600 text-sm">
+                Manage food categories • {categories.length} shown
+              </p>
+            </div>
+
             <button
               onClick={openModalForCreate}
-              className="bg-gradient-to-r from-orange-500 to-orange-600 hover:brightness-105 text-white px-5 py-2.5 rounded-xl font-medium shadow-md transition text-sm sm:text-base whitespace-nowrap"
+              className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2.5 rounded-lg font-medium shadow-sm transition flex items-center gap-2"
             >
-              + Create Category
+              <FaPlus className="text-sm" />
+              Create Category
             </button>
           </div>
 
-          {/* Message Toast - more visible on error */}
+          {/* Messages */}
           {message && (
             <div
-              className={`mb-6 p-4 rounded-xl shadow-md border text-sm sm:text-base animate-fade-in ${
+              className={`mb-6 p-4 rounded-lg border flex items-center gap-3 text-sm ${
                 message.type === "success"
-                  ? "bg-green-50 border-green-300 text-green-800"
-                  : "bg-red-50 border-red-300 text-red-800 font-medium"
+                  ? "bg-green-50 border-green-200 text-green-800"
+                  : "bg-red-50 border-red-200 text-red-800"
               }`}
             >
-              {message.text}
+              {message.type === "success" ? (
+                <FaCheckCircle className="text-green-600 text-lg" />
+              ) : (
+                <FaTimesCircle className="text-red-600 text-lg" />
+              )}
+              <span>{message.text}</span>
             </div>
           )}
 
-          {/* Search + List */}
-          <div className="bg-white shadow-lg rounded-2xl border border-gray-200 overflow-hidden">
-            {/* ... search input remains the same ... */}
+          {/* Main Content Container */}
+          <div className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
+            {/* Search */}
             <div className="p-5 sm:p-6 border-b border-gray-200">
               <div className="relative max-w-md">
+                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Search by name or slug..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition"
                 />
-                <svg
-                  className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
               </div>
             </div>
 
             {fetchLoading ? (
-              <div className="text-center py-12 text-gray-500 text-sm">Loading categories...</div>
-            ) : filteredCategories.length === 0 ? (
-              <div className="text-center py-12 text-gray-500 text-sm">
-                {searchTerm ? "No matching categories found" : "No categories yet. Create one!"}
+              <div className="p-12 text-center text-gray-500">Loading categories...</div>
+            ) : categories.length === 0 ? (
+              <div className="p-12 text-center">
+                <FaFolder className="mx-auto text-5xl text-gray-300 mb-4" />
+                <h3 className="text-lg font-medium text-gray-700">
+                  {searchTerm ? "No matching categories" : "No categories yet"}
+                </h3>
+                <p className="text-gray-500 mt-2">
+                  {searchTerm ? "Try different keywords" : "Create your first category"}
+                </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <>
                 {/* Desktop Table */}
-                <table className="w-full min-w-[640px] hidden md:table text-xs sm:text-sm">
-                  <thead className="bg-orange-50">
-                    <tr>
-                      <th className="p-4 text-left font-semibold text-gray-700">Name</th>
-                      <th className="p-4 text-left font-semibold text-gray-700">Slug</th>
-                      <th className="p-4 text-left font-semibold text-gray-700">Description</th>
-                      <th className="p-4 text-center font-semibold text-gray-700">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredCategories.map((cat) => (
-                      <tr key={cat._id} className="border-b hover:bg-orange-50/60 transition">
-                        <td className="p-4 font-medium">{cat.name}</td>
-                        <td className="p-4 text-gray-600 font-mono">{cat.slug}</td>
-                        <td className="p-4 text-gray-600">
-                          {cat.description || <span className="text-gray-400">-</span>}
-                        </td>
-                        <td className="p-4 text-center space-x-3">
-                          <button
-                            onClick={() => openModalForEdit(cat)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition shadow-sm"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => openDeleteModal(cat._id)}
-                            className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition shadow-sm"
-                          >
-                            Delete
-                          </button>
-                        </td>
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                          Name
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                          Slug
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                          Description
+                        </th>
+                        <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                          Actions
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {categories.map((cat) => (
+                        <tr key={cat._id} className="hover:bg-orange-50/30 transition-colors">
+                          <td className="px-6 py-4 font-medium text-gray-900">{cat.name}</td>
+                          <td className="px-6 py-4 text-sm text-gray-600 font-mono">{cat.slug}</td>
+                          <td className="px-6 py-4 text-sm text-gray-600">
+                            {cat.description || <span className="text-gray-400">—</span>}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => openModalForEdit(cat)}
+                                className="p-2 text-orange-600 hover:text-orange-800 hover:bg-orange-50 rounded-lg transition"
+                                title="Edit"
+                              >
+                                <FaEdit />
+                              </button>
+                              <button
+                                onClick={() => openDeleteModal(cat._id)}
+                                className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition"
+                                title="Delete"
+                              >
+                                <FaTrashAlt />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-                {/* Mobile Cards - same as before */}
+                {/* Mobile Cards */}
                 <div className="md:hidden divide-y divide-gray-200">
-                  {filteredCategories.map((cat) => (
+                  {categories.map((cat) => (
                     <div key={cat._id} className="p-5">
-                      <h3 className="font-semibold text-base mb-2">{cat.name}</h3>
-                      <p className="text-xs text-gray-600 mb-1">
+                      <h3 className="font-semibold text-base mb-1">{cat.name}</h3>
+                      <p className="text-sm text-gray-600 mb-1">
                         <span className="font-medium">Slug:</span> {cat.slug}
                       </p>
-                      <p className="text-xs text-gray-600 mb-4">
-                        {cat.description || "No description"}
+                      <p className="text-sm text-gray-600 mb-4">
+                        {cat.description || "No description provided"}
                       </p>
                       <div className="flex gap-3">
                         <button
                           onClick={() => openModalForEdit(cat)}
-                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-xs font-medium"
+                          className="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-2.5 rounded-lg text-sm font-medium transition"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => openDeleteModal(cat._id)}
-                          className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg text-xs font-medium"
+                          className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-lg text-sm font-medium transition"
                         >
                           Delete
                         </button>
@@ -339,73 +380,113 @@ export default function CategoryManagement() {
                     </div>
                   ))}
                 </div>
-              </div>
+
+                {/* Pagination */}
+                {pagination && pagination.totalPages > 1 && (
+                  <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-sm text-gray-600">
+                    <div>
+                      Showing {(currentPage - 1) * 10 + 1} –{" "}
+                      {Math.min(currentPage * 10, pagination.total)} of {pagination.total}
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        disabled={currentPage === 1 || fetchLoading || loading}
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        className="px-4 py-2 bg-white border border-gray-300 rounded-lg disabled:opacity-50 hover:bg-gray-50 transition"
+                      >
+                        Previous
+                      </button>
+
+                      <span className="px-4 py-2 font-medium">
+                        Page {currentPage} of {pagination.totalPages}
+                      </span>
+
+                      <button
+                        disabled={
+                          currentPage === pagination.totalPages || fetchLoading || loading
+                        }
+                        onClick={() => setCurrentPage((p) => p + 1)}
+                        className="px-4 py-2 bg-white border border-gray-300 rounded-lg disabled:opacity-50 hover:bg-gray-50 transition"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
 
-        {/* Create/Edit Modal - unchanged */}
+        {/* Create / Edit Modal */}
         {modalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-              <div className="p-6 md:p-7">
-                <div className="flex justify-between items-center mb-5">
-                  <h2 className="text-xl font-bold text-gray-900">
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 sm:p-8">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                    <FaTags className="text-orange-600" />
                     {editCategory ? "Edit Category" : "Create New Category"}
                   </h2>
                   <button
                     onClick={closeModal}
-                    className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                    className="text-gray-500 hover:text-gray-700 text-2xl"
                   >
                     ×
                   </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-5 text-sm">
-                  {/* ... form fields same as before ... */}
+                <form onSubmit={handleSubmit} className="space-y-5">
                   <div>
-                    <label className="block text-gray-700 font-medium mb-1.5">Category Name *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Category Name *
+                    </label>
                     <input
                       type="text"
                       name="name"
                       value={formData.name}
                       onChange={handleFormChange}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/40"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-gray-700 font-medium mb-1.5">Slug *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Slug *
+                    </label>
                     <input
                       type="text"
                       name="slug"
                       value={formData.slug}
                       onChange={handleFormChange}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition font-mono"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/40 font-mono"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-gray-700 font-medium mb-1.5">Description</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Description
+                    </label>
                     <textarea
                       name="description"
                       value={formData.description}
                       onChange={handleFormChange}
-                      rows={3}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition"
+                      rows={4}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/40 resize-none"
                     />
                   </div>
 
-                  <div className="flex gap-4 pt-4">
+                  <div className="flex gap-4 pt-6 border-t">
                     <button
                       type="submit"
                       disabled={loading}
-                      className={`flex-1 py-3 px-6 rounded-xl font-semibold text-white transition shadow-md ${
+                      className={`flex-1 py-2.5 rounded-lg font-medium text-white transition ${
                         loading
-                          ? "bg-orange-300 cursor-not-allowed"
-                          : "bg-gradient-to-r from-orange-500 to-orange-600 hover:brightness-105"
+                          ? "bg-orange-400 cursor-not-allowed"
+                          : "bg-orange-600 hover:bg-orange-700"
                       }`}
                     >
                       {loading
@@ -417,7 +498,7 @@ export default function CategoryManagement() {
                     <button
                       type="button"
                       onClick={closeModal}
-                      className="flex-1 py-3 px-6 rounded-xl font-semibold bg-gray-200 text-gray-800 hover:bg-gray-300 transition"
+                      className="flex-1 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition"
                     >
                       Cancel
                     </button>
@@ -430,27 +511,27 @@ export default function CategoryManagement() {
 
         {/* Delete Confirmation Modal */}
         {deleteModal.open && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 md:p-8">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Delete Category?</h3>
-              <p className="text-gray-600 mb-6">
-                This action cannot be undone. Associated items may be affected.
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 sm:p-8">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                Delete Category?
+              </h3>
+              <p className="text-gray-600 mb-6 leading-relaxed">
+                This action cannot be undone. Meals and items in this category may become uncategorized.
               </p>
               <div className="flex gap-4">
                 <button
                   onClick={() => setDeleteModal({ open: false, id: null })}
-                  className="flex-1 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl font-semibold transition text-sm md:text-base"
                   disabled={loading}
+                  className="flex-1 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmDelete}
                   disabled={loading}
-                  className={`flex-1 py-3 rounded-xl font-semibold text-white transition shadow-md text-sm md:text-base ${
-                    loading
-                      ? "bg-red-400 cursor-not-allowed"
-                      : "bg-red-600 hover:bg-red-700"
+                  className={`flex-1 py-2.5 rounded-lg font-medium text-white transition ${
+                    loading ? "bg-red-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"
                   }`}
                 >
                   {loading ? "Deleting..." : "Yes, Delete"}
