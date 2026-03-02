@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
-// import api from "../../lib/axios";
 import api from "@/app/lib/axios";
+import { useAdminAuth } from "@/app/context/AdminAuthContext";
+
 interface LoginForm {
   email: string;
   password: string;
@@ -23,6 +24,7 @@ interface LoginResponse {
 
 export default function AdminLogin() {
   const router = useRouter();
+  const { isAuthenticated, loading: authLoading, refreshAdmin } = useAdminAuth();
 
   const [form, setForm] = useState<LoginForm>({
     email: "",
@@ -32,6 +34,13 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  // 🔐 AUTO REDIRECT IF ALREADY LOGGED IN
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      router.replace("/admin/dashboard");
+    }
+  }, [authLoading, isAuthenticated, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({
@@ -52,10 +61,16 @@ export default function AdminLogin() {
     try {
       setLoading(true);
 
-      const res = await api.post<LoginResponse>("/admin/login", {
-        email: form.email.trim(),
-        password: form.password,
-      });
+      const res = await api.post<LoginResponse>(
+        "/admin/login",
+        {
+          email: form.email.trim(),
+          password: form.password,
+        },
+        {
+          withCredentials: true, // VERY IMPORTANT for cookie auth
+        }
+      );
 
       const data = res.data;
 
@@ -63,14 +78,7 @@ export default function AdminLogin() {
         throw new Error(data.message || "Login failed");
       }
 
-      // Store in cookies (consider HttpOnly + backend-set in production)
-      Cookies.set("token", "admin-logged-in", {
-        expires: 7,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        path: "/",
-      });
-
+      // (Optional) Only for UI fallback — real auth should be backend cookie
       Cookies.set("admin_data", JSON.stringify(data.admin), {
         expires: 7,
         secure: process.env.NODE_ENV === "production",
@@ -78,10 +86,12 @@ export default function AdminLogin() {
         path: "/",
       });
 
-      // Force refresh router cache + redirect (fixes many App Router issues)
-      router.refresh();
-      router.replace("/admin/dashboard");
+      // 🔄 Refresh global admin state (important)
+      await refreshAdmin();
 
+      // 🚀 Redirect to dashboard
+      router.replace("/admin/dashboard");
+      router.refresh();
     } catch (err: any) {
       const message =
         err?.response?.data?.message ||
@@ -93,6 +103,17 @@ export default function AdminLogin() {
     }
   };
 
+  // ⏳ While checking auth, prevent flicker
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg font-semibold text-gray-600">
+          Checking authentication...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-amber-50 px-4 sm:px-6">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-orange-100 p-6 sm:p-8 md:p-10">
@@ -101,7 +122,9 @@ export default function AdminLogin() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 text-white text-3xl font-bold mb-4 shadow-md">
             🍱
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Admin Login</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            Admin Login
+          </h1>
           <p className="text-gray-500 mt-2 text-sm sm:text-base">
             Access the ReadyMealz Admin Panel
           </p>
@@ -154,36 +177,9 @@ export default function AdminLogin() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
               >
-                {showPassword ? (
-                  // Eye-off icon (hide)
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.977 9.977 0 012.133-3.675m4.584-.3A3 3 0 0012 9a3 3 0 002.825 2.975m4.584.3a9.977 9.977 0 012.133 3.675c-1.274 4.057-5.064 7-9.542 7M3 3l18 18"
-                    />
-                  </svg>
-                ) : (
-                  // Eye icon (show)
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                    />
-                  </svg>
-                )}
+                {showPassword ? "🙈" : "👁️"}
               </button>
             </div>
           </div>
@@ -194,37 +190,10 @@ export default function AdminLogin() {
             disabled={loading}
             className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3.5 rounded-xl font-semibold shadow-md hover:brightness-105 transition disabled:opacity-60 disabled:cursor-not-allowed mt-3"
           >
-            {loading ? (
-              <span className="flex items-center justify-center">
-                <svg
-                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z"
-                  />
-                </svg>
-                Logging in...
-              </span>
-            ) : (
-              "Login to Dashboard"
-            )}
+            {loading ? "Logging in..." : "Login to Dashboard"}
           </button>
         </form>
 
-        {/* Footer */}
         <div className="mt-8 text-center text-sm text-gray-500">
           <p>Protected area — only for authorized admins</p>
         </div>

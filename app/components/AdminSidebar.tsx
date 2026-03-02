@@ -25,15 +25,15 @@ import {
 
 const NAV_ITEMS = [
   { href: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/admin/orders",     icon: ShoppingBag,    label: "Orders" },
-  { href: "/admin/meals",      icon: Utensils,       label: "Meals" },
-  { href: "/admin/users",      icon: Users,          label: "Users" },
-   { href: "/admin/admins",      icon: Users,          label: "Admins" },
-{ href: "/admin/category",      icon: Users,          label: "Category" },
+  { href: "/admin/orders", icon: ShoppingBag, label: "Orders" },
+  { href: "/admin/meals", icon: Utensils, label: "Meals" },
+  { href: "/admin/users", icon: Users, label: "Users" },
+  { href: "/admin/admins", icon: Users, label: "Admins" },
+  { href: "/admin/category", icon: Users, label: "Category" },
   { href: "/admin/subscriptions", icon: CreditCard, label: "Subscriptions" },
-  { href: "/admin/analytics",  icon: BarChart3,      label: "Analytics" },
-  { href: "/admin/settings",   icon: Settings,       label: "Settings" },
-  { href: "/admin/profile",    icon: UserCircle,     label: "My Profile" },
+  { href: "/admin/analytics", icon: BarChart3, label: "Analytics" },
+  { href: "/admin/settings", icon: Settings, label: "Settings" },
+  { href: "/admin/profile", icon: UserCircle, label: "My Profile" },
 ];
 
 export default function AdminSidebar() {
@@ -74,9 +74,7 @@ export default function AdminSidebar() {
     await logout();
     router.push("/admin/login");
   };
-
   if (loading) return null;
-
   const SidebarLinks = ({ onLinkClick }: { onLinkClick?: () => void }) => (
     <nav className="flex-1 overflow-y-auto py-5 px-3 space-y-1.5">
       {NAV_ITEMS.map((item) => {
@@ -88,17 +86,14 @@ export default function AdminSidebar() {
             onClick={onLinkClick}
             title={collapsed ? item.label : undefined}
             className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-              ${isActive
-                ? "bg-orange-500 text-white shadow-sm"
-                : "text-gray-700 hover:bg-orange-50 hover:text-orange-600"
+              ${isActive ? "bg-orange-500 text-white shadow-sm":"text-gray-700 hover:bg-orange-50 hover:text-orange-600"
               }
               ${collapsed ? "justify-center" : ""}
             `}
           >
             <item.icon
-              className={`h-5 w-5 flex-shrink-0 transition-colors ${
-                isActive ? "text-white" : "text-gray-500 group-hover:text-orange-600"
-              }`}
+              className={`h-5 w-5 flex-shrink-0 transition-colors ${isActive ? "text-white" : "text-gray-500 group-hover:text-orange-600"
+                }`}
             />
             {!collapsed && <span className="truncate">{item.label}</span>}
           </Link>
@@ -106,6 +101,7 @@ export default function AdminSidebar() {
       })}
     </nav>
   );
+
 
   return (
     <>
@@ -141,7 +137,7 @@ export default function AdminSidebar() {
               href="/admin/dashboard"
               className="flex items-center gap-2.5 font-bold text-xl sm:text-2xl text-orange-600 tracking-tight"
             >
-              🍱 <span className="hidden sm:inline">ReadyMealz Admin</span>
+              <span className="hidden sm:inline">ReadyMealz Admin</span>
             </Link>
           </div>
 
@@ -166,7 +162,6 @@ export default function AdminSidebar() {
                     {admin.name?.charAt(0)?.toUpperCase() || "A"}
                   </div>
                 </button>
-
                 {dropdownOpen && (
                   <div className="absolute right-0 mt-3 w-64 sm:w-72 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50">
                     <div className="px-5 py-4 border-b bg-gradient-to-r from-orange-50 to-white">
@@ -184,11 +179,10 @@ export default function AdminSidebar() {
                           setDropdownOpen(false);
                           router.push("/admin/profile");
                         }}
-                        className={`w-full flex items-center gap-3 px-5 py-3 text-left transition hover:bg-orange-50 ${
-                          pathname === "/admin/profile"
+                        className={`w-full flex items-center gap-3 px-5 py-3 text-left transition hover:bg-orange-50 ${pathname === "/admin/profile"
                             ? "text-orange-600 font-medium bg-orange-50/60"
                             : "text-gray-700 hover:text-orange-700"
-                        }`}
+                          }`}
                       >
                         <UserCircle className="h-5 w-5" />
                         My Profile

@@ -11,7 +11,6 @@ export default function AdminProtectedRoute({
 }) {
   const { admin, loading, isAuthenticated } = useAdminAuth();
   const router = useRouter();
-
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       router.push("/admin/login");
@@ -25,8 +24,6 @@ export default function AdminProtectedRoute({
       </div>
     );
   }
-
   if (!admin) return null;
-
   return <>{children}</>;
 }
