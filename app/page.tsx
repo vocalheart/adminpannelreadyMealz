@@ -22,19 +22,19 @@ export default function HomePage() {
           Navigation Bar
       ──────────────────────────────────────── */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
           <div className="flex items-center justify-between h-16 md:h-18">
             {/* Logo / Brand */}
-            <Link href="/" className="flex items-center gap-2.5">
-              <div className="w-9 h-9 bg-orange-600 rounded-xl flex items-center justify-center text-white font-bold text-xl">
+            <Link href="/" className="flex items-center gap-2.5 shrink-0">
+              <div className="w-8 h-8 bg-orange-600 rounded-xl flex items-center justify-center text-white font-bold text-xl">
                 R
               </div>
-              <span className="font-bold text-xl text-gray-900 tracking-tight">
+              <span className="font-bold text-lg md:text-xl text-gray-900 tracking-tight">
                 ReadyMealz
               </span>
             </Link>
 
-            {/* Desktop Links */}
+            {/* Desktop Links - hidden on mobile */}
             <div className="hidden md:flex items-center gap-8">
               <Link
                 href="/menu"
@@ -56,24 +56,25 @@ export default function HomePage() {
               </Link>
             </div>
 
-            {/* Auth Buttons */}
-            <div className="flex items-center gap-4">
+            {/* Auth Buttons - both visible on all sizes now */}
+            <div className="flex items-center gap-3 sm:gap-4">
               <Link
                 href="/admin/login"
-                className="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 text-orange-700 font-semibold rounded-lg border border-orange-200 hover:bg-orange-50 transition"
+                className="inline-flex items-center gap-1.5 sm:gap-2 px-4 py-2 text-orange-700 font-semibold text-sm rounded-lg border border-orange-200 hover:bg-orange-50 transition whitespace-nowrap"
               >
                 <FiLogIn className="h-4 w-4" />
-                Admin Login
+                <span className="hidden xs:inline">Admin</span>
+                <span className="xs:hidden">Admin</span> {/* short on very small screens */}
               </Link>
 
               <Link
                 href="https://www.readymealz.in/"
-                className="inline-flex items-center gap-2 px-6 py-2.5 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition shadow-sm"
+                className="inline-flex items-center gap-2 px-5 py-2 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition shadow-sm text-sm"
               >
                 Customer Login
               </Link>
 
-              {/* Mobile menu button (optional - can expand later) */}
+              {/* Mobile menu button */}
               <button className="md:hidden p-2 text-gray-700 hover:text-orange-600">
                 <FiMenu className="h-6 w-6" />
               </button>
@@ -82,8 +83,9 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* Add top padding so content isn't hidden under fixed navbar */}
+      {/* Top padding for fixed nav */}
       <div className="pt-20 md:pt-24"></div>
+
       {/* Hero Section */}
       <section className="relative pt-8 pb-20 md:pt-16 md:pb-32 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-orange-100/40 to-amber-100/30 -z-10" />
