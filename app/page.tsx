@@ -84,7 +84,6 @@ export default function HomePage() {
 
       {/* Add top padding so content isn't hidden under fixed navbar */}
       <div className="pt-20 md:pt-24"></div>
-
       {/* Hero Section */}
       <section className="relative pt-8 pb-20 md:pt-16 md:pb-32 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-orange-100/40 to-amber-100/30 -z-10" />
