@@ -30,10 +30,13 @@ const NAV_ITEMS = [
   { href: "/admin/users", icon: Users, label: "Users" },
   { href: "/admin/admins", icon: Users, label: "Admins" },
   { href: "/admin/category", icon: Users, label: "Category" },
+  { href: "/admin/tags", icon: UserCircle, label: "Tags" },
+  { href: "/admin/food-types", icon: UserCircle, label: "Food Types" },
   { href: "/admin/subscriptions", icon: CreditCard, label: "Subscriptions" },
   { href: "/admin/analytics", icon: BarChart3, label: "Analytics" },
   { href: "/admin/settings", icon: Settings, label: "Settings" },
   { href: "/admin/profile", icon: UserCircle, label: "My Profile" },
+
 ];
 
 export default function AdminSidebar() {
@@ -86,7 +89,7 @@ export default function AdminSidebar() {
             onClick={onLinkClick}
             title={collapsed ? item.label : undefined}
             className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-              ${isActive ? "bg-orange-500 text-white shadow-sm":"text-gray-700 hover:bg-orange-50 hover:text-orange-600"
+              ${isActive ? "bg-orange-500 text-white shadow-sm" : "text-gray-700 hover:bg-orange-50 hover:text-orange-600"
               }
               ${collapsed ? "justify-center" : ""}
             `}
@@ -180,8 +183,8 @@ export default function AdminSidebar() {
                           router.push("/admin/profile");
                         }}
                         className={`w-full flex items-center gap-3 px-5 py-3 text-left transition hover:bg-orange-50 ${pathname === "/admin/profile"
-                            ? "text-orange-600 font-medium bg-orange-50/60"
-                            : "text-gray-700 hover:text-orange-700"
+                          ? "text-orange-600 font-medium bg-orange-50/60"
+                          : "text-gray-700 hover:text-orange-700"
                           }`}
                       >
                         <UserCircle className="h-5 w-5" />

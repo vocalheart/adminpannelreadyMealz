@@ -2,19 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import {
-  FiClock,
-  FiTruck,
-  FiShield,
-  FiHeart,
-  FiArrowRight,
-  FiMapPin,
-  FiCalendar,
-  FiUsers,
-  FiLogIn,
-  FiMenu,
-} from "react-icons/fi";
-
+import {FiClock,FiTruck,FiShield, FiHeart, FiArrowRight, FiMapPin, FiCalendar, FiUsers,  FiLogIn,  FiMenu,} from "react-icons/fi";
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50/70 via-white to-white">
@@ -55,7 +43,6 @@ export default function HomePage() {
                 About
               </Link>
             </div>
-
             {/* Auth Buttons - both visible on all sizes now */}
             <div className="flex items-center gap-3 sm:gap-4">
               <Link
@@ -73,7 +60,6 @@ export default function HomePage() {
               >
                 Customer Login
               </Link>
-
               {/* Mobile menu button */}
               <button className="md:hidden p-2 text-gray-700 hover:text-orange-600">
                 <FiMenu className="h-6 w-6" />
@@ -82,14 +68,11 @@ export default function HomePage() {
           </div>
         </div>
       </nav>
-
       {/* Top padding for fixed nav */}
       <div className="pt-20 md:pt-24"></div>
-
       {/* Hero Section */}
       <section className="relative pt-8 pb-20 md:pt-16 md:pb-32 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-orange-100/40 to-amber-100/30 -z-10" />
-
         <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Left - Text */}
@@ -98,26 +81,22 @@ export default function HomePage() {
                 <FiClock className="h-4 w-4" />
                 <span>Fresh everyday • No preservatives</span>
               </div>
-
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 leading-tight">
                 Home-cooked meals
                 <span className="text-orange-600"> delivered daily</span>
               </h1>
-
               <p className="mt-6 text-lg sm:text-xl text-gray-700 max-w-xl mx-auto lg:mx-0">
                 Healthy, hygienic, affordable tiffin service in Bhopal.
                 Choose daily meals or monthly subscriptions — cooked fresh every morning.
               </p>
-
               <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link
+                <Link 
                   href="/subscribe"
                   className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-orange-600 text-white font-semibold rounded-xl hover:bg-orange-700 transition shadow-md text-lg"
                 >
                   Start Subscription
                   <FiArrowRight className="h-5 w-5" />
                 </Link>
-
                 <Link
                   href="/menu"
                   className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white border-2 border-orange-600 text-orange-700 font-semibold rounded-xl hover:bg-orange-50 transition text-lg"
@@ -125,7 +104,6 @@ export default function HomePage() {
                   See Today's Menu
                 </Link>
               </div>
-
               <div className="mt-10 flex flex-wrap justify-center lg:justify-start gap-8 text-sm text-gray-600">
                 <div className="flex items-center gap-2">
                   <FiTruck className="h-5 w-5 text-orange-600" />
@@ -141,7 +119,6 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-
             {/* Right - Visual / Mockup */}
             <div className="relative hidden lg:block">
               <div className="relative z-10">
@@ -152,7 +129,6 @@ export default function HomePage() {
                     </div>
                   </div>
                 </div>
-
                 {/* Floating badges */}
                 <div className="absolute -top-6 -right-6 bg-white rounded-full p-4 shadow-lg">
                   <div className="text-center">
@@ -160,7 +136,6 @@ export default function HomePage() {
                     <div className="text-xs text-gray-500">starting</div>
                   </div>
                 </div>
-
                 <div className="absolute -bottom-8 -left-8 bg-white rounded-full p-5 shadow-lg">
                   <div className="flex items-center gap-3">
                     <FiUsers className="h-6 w-6 text-orange-600" />
@@ -175,7 +150,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
       {/* Features / Benefits */}
       <section className="py-16 md:py-24 bg-white">
         <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12">
@@ -187,7 +161,6 @@ export default function HomePage() {
               Fresh, healthy, home-style meals delivered at your doorstep — every single day.
             </p>
           </div>
-
           <div className="grid md:grid-cols-3 gap-8 lg:gap-10">
             {[
               {
@@ -229,11 +202,9 @@ export default function HomePage() {
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight">
             Start eating healthy home-cooked food today
           </h2>
-
           <p className="mt-6 text-lg sm:text-xl opacity-90 max-w-3xl mx-auto">
             First week trial at special price • Cancel anytime • No long-term commitment
           </p>
-
           <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/subscribe"
@@ -252,7 +223,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
       {/* Footer space */}
       <div className="h-16 md:h-24"></div>
     </div>

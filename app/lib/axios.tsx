@@ -5,12 +5,15 @@
 import axios from 'axios';
 
 const instance = axios.create({
-    baseURL: "https://api.readymealz.in/api",
+    baseURL: "http://localhost:5000/api",
     withCredentials: true,
 });
+
 export default instance;
 
-// http://localhost:5000
+// 
+
+
 
 
 
