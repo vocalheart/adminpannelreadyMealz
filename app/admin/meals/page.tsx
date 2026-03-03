@@ -73,7 +73,7 @@ export default function MealManagement() {
     id: null,
   });
 
-  // Fetch meals
+  // Fetch meals with pagination & search
   const fetchMeals = useCallback(async (page = 1, search = "") => {
     setFetchLoading(true);
     try {
@@ -97,7 +97,7 @@ export default function MealManagement() {
     }
   }, []);
 
-  // Load filter data (categories, food types, tags)
+  // Load dropdown data once
   useEffect(() => {
     const loadFilters = async () => {
       try {
@@ -213,12 +213,12 @@ export default function MealManagement() {
     }
   };
 
-  // Mark existing image for deletion (only in edit mode)
+  // Mark an existing image to be deleted from server
   const markImageForDelete = (key: string) => {
     setImagesToDelete((prev) => [...prev, key]);
   };
 
-  // Remove newly selected image before upload
+  // Remove a newly selected (local) image before upload
   const removeNewImage = (index: number) => {
     setNewImages((prev) => prev.filter((_, i) => i !== index));
   };
@@ -272,7 +272,7 @@ export default function MealManagement() {
             </button>
           </div>
 
-          {/* Message */}
+          {/* Global message */}
           {message && (
             <div
               className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${
@@ -286,7 +286,7 @@ export default function MealManagement() {
             </div>
           )}
 
-          {/* Search */}
+          {/* Search bar */}
           <div className="mb-6">
             <div className="relative max-w-md">
               <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -300,7 +300,7 @@ export default function MealManagement() {
             </div>
           </div>
 
-          {/* Meals List */}
+          {/* Meals list */}
           {fetchLoading ? (
             <div className="text-center py-12">Loading meals...</div>
           ) : meals.length === 0 ? (
@@ -419,7 +419,7 @@ export default function MealManagement() {
             </div>
           )}
 
-          {/* Create/Edit Modal */}
+          {/* Create / Edit Modal */}
           {modalOpen && (
             <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -520,15 +520,17 @@ export default function MealManagement() {
                         </select>
                       </div>
                     </div>
+
                     {/* Images Section */}
                     <div>
                       <label className="block text-sm font-medium mb-2">Images (max 5)</label>
-                      {/* Existing images (only in edit mode) */}
-                      {editMeal?.images?.length > 0 && (
+
+                      {/* Existing images – only shown in edit mode */}
+                      {editMeal?.images?.length || 0 > 0 && (
                         <div className="mb-4">
                           <p className="text-sm text-gray-600 mb-2">Current Images:</p>
                           <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
-                            {editMeal.images.map((img) => (
+                            {editMeal!.images.map((img) => (
                               <div key={img.key} className="relative group">
                                 <img
                                   src={img.url}
@@ -546,8 +548,9 @@ export default function MealManagement() {
                             ))}
                           </div>
                         </div>
-                      )};
-                      {/* Newly selected images */}
+                      )}
+
+                      {/* Newly selected images preview */}
                       {newImages.length > 0 && (
                         <div className="mb-4">
                           <p className="text-sm text-gray-600 mb-2">New Images to Upload:</p>
@@ -594,7 +597,7 @@ export default function MealManagement() {
                       </label>
                     </div>
 
-                    {/* Action Buttons */}
+                    {/* Submit / Cancel */}
                     <div className="flex gap-4 pt-6 border-t">
                       <button
                         type="submit"
