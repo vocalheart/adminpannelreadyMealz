@@ -73,7 +73,7 @@ export default function MealManagement() {
     id: null,
   });
 
-  // Fetch meals with pagination & search
+  // Fetch meals
   const fetchMeals = useCallback(async (page = 1, search = "") => {
     setFetchLoading(true);
     try {
@@ -97,7 +97,7 @@ export default function MealManagement() {
     }
   }, []);
 
-  // Load dropdown data once
+  // Load filter data once
   useEffect(() => {
     const loadFilters = async () => {
       try {
@@ -167,6 +167,13 @@ export default function MealManagement() {
       return;
     }
 
+    // Optional: total images check
+    const currentImagesCount = editMeal ? editMeal.images.length - imagesToDelete.length : 0;
+    if (currentImagesCount + newImages.length > 5) {
+      showMessage("Maximum 5 images allowed in total", "error");
+      return;
+    }
+
     try {
       setLoading(true);
       const data = new FormData();
@@ -213,12 +220,12 @@ export default function MealManagement() {
     }
   };
 
-  // Mark an existing image to be deleted from server
+  // Mark existing image for deletion (edit mode only)
   const markImageForDelete = (key: string) => {
-    setImagesToDelete((prev) => [...prev, key]);
+    setImagesToDelete((prev) => [...new Set([...prev, key])]); // avoid duplicates
   };
 
-  // Remove a newly selected (local) image before upload
+  // Remove newly selected image (before submit)
   const removeNewImage = (index: number) => {
     setNewImages((prev) => prev.filter((_, i) => i !== index));
   };
@@ -286,7 +293,7 @@ export default function MealManagement() {
             </div>
           )}
 
-          {/* Search bar */}
+          {/* Search */}
           <div className="mb-6">
             <div className="relative max-w-md">
               <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -421,10 +428,10 @@ export default function MealManagement() {
 
           {/* Create / Edit Modal */}
           {modalOpen && (
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
               <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
                 <div className="p-6 sm:p-8">
-                  <div className="flex justify-between items-center mb-6">
+                  <div className="flex justify-between items-center mb-6 sticky top-0 bg-white z-10 py-2">
                     <h2 className="text-2xl font-bold">
                       {editMeal ? "Edit Meal" : "Add New Meal"}
                     </h2>
@@ -521,53 +528,57 @@ export default function MealManagement() {
                       </div>
                     </div>
 
-                    {/* Images Section */}
+                    {/* Images Management */}
                     <div>
-                      <label className="block text-sm font-medium mb-2">Images (max 5)</label>
+                      <label className="block text-sm font-medium mb-2">Images (max 5 total)</label>
 
-                      {/* Existing images – only shown in edit mode */}
-                      {editMeal?.images?.length || 0 > 0 && (
-                        <div className="mb-4">
+                      {/* Current images (edit mode only) */}
+                      {editMeal && (editMeal.images?.length || 0) > 0 && (
+                        <div className="mb-6">
                           <p className="text-sm text-gray-600 mb-2">Current Images:</p>
-                          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
-                            {editMeal!.images.map((img) => (
-                              <div key={img.key} className="relative group">
-                                <img
-                                  src={img.url}
-                                  alt=""
-                                  className="h-20 w-full object-cover rounded border"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => markImageForDelete(img.key)}
-                                  className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"
-                                >
-                                  <FaTrash className="text-xs" />
-                                </button>
-                              </div>
-                            ))}
+                          <div className="grid grid-cols-3 sm:grid-cols-5 gap-4">
+                            {editMeal.images
+                              .filter((img) => !imagesToDelete.includes(img.key)) // hide marked deleted
+                              .map((img) => (
+                                <div key={img.key} className="relative group rounded-lg overflow-hidden border">
+                                  <img
+                                    src={img.url}
+                                    alt="meal"
+                                    className="h-24 w-full object-cover"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => markImageForDelete(img.key)}
+                                    className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition shadow-md"
+                                    title="Delete this image"
+                                  >
+                                    <FaTrash className="text-sm" />
+                                  </button>
+                                </div>
+                              ))}
                           </div>
                         </div>
                       )}
 
-                      {/* Newly selected images preview */}
+                      {/* New uploaded images preview */}
                       {newImages.length > 0 && (
-                        <div className="mb-4">
+                        <div className="mb-6">
                           <p className="text-sm text-gray-600 mb-2">New Images to Upload:</p>
-                          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+                          <div className="grid grid-cols-3 sm:grid-cols-5 gap-4">
                             {newImages.map((file, idx) => (
-                              <div key={idx} className="relative group">
+                              <div key={idx} className="relative group rounded-lg overflow-hidden border">
                                 <img
                                   src={URL.createObjectURL(file)}
                                   alt="preview"
-                                  className="h-20 w-full object-cover rounded border"
+                                  className="h-24 w-full object-cover"
                                 />
                                 <button
                                   type="button"
                                   onClick={() => removeNewImage(idx)}
-                                  className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"
+                                  className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition shadow-md"
+                                  title="Remove"
                                 >
-                                  <FaTrash className="text-xs" />
+                                  <FaTrash className="text-sm" />
                                 </button>
                               </div>
                             ))}
@@ -575,9 +586,10 @@ export default function MealManagement() {
                         </div>
                       )}
 
-                      <label className="cursor-pointer inline-flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-5 py-2.5 rounded-lg border transition">
-                        <FaUpload />
-                        <span>Choose Images</span>
+                      {/* Upload button */}
+                      <label className="cursor-pointer inline-flex items-center gap-3 bg-orange-50 hover:bg-orange-100 px-6 py-3 rounded-lg border border-orange-200 text-orange-700 font-medium transition">
+                        <FaUpload className="text-lg" />
+                        <span>Upload New Images</span>
                         <input
                           type="file"
                           multiple
@@ -585,8 +597,9 @@ export default function MealManagement() {
                           onChange={(e) => {
                             if (e.target.files) {
                               const files = Array.from(e.target.files);
-                              if (newImages.length + files.length > 5) {
-                                showMessage("Maximum 5 images allowed", "error");
+                              const totalAfter = (editMeal?.images?.length || 0) - imagesToDelete.length + newImages.length + files.length;
+                              if (totalAfter > 5) {
+                                showMessage("Maximum 5 images allowed in total", "error");
                                 return;
                               }
                               setNewImages((prev) => [...prev, ...files]);
@@ -595,9 +608,13 @@ export default function MealManagement() {
                           className="hidden"
                         />
                       </label>
+
+                      <p className="text-sm text-gray-500 mt-2">
+                        {(editMeal?.images?.length || 0) - imagesToDelete.length + newImages.length} / 5 images
+                      </p>
                     </div>
 
-                    {/* Submit / Cancel */}
+                    {/* Buttons */}
                     <div className="flex gap-4 pt-6 border-t">
                       <button
                         type="submit"
