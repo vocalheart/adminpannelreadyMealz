@@ -27,6 +27,7 @@ const NAV_ITEMS = [
   { href: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/admin/orders", icon: ShoppingBag, label: "Orders" },
   { href: "/admin/meals", icon: Utensils, label: "Meals" },
+    { href: "/admin/bulkfood", icon: Utensils, label: "Bulk-Food" },
   { href: "/admin/users", icon: Users, label: "Users" },
   { href: "/admin/admins", icon: Users, label: "Admins" },
   { href: "/admin/category", icon: Users, label: "Category" },
@@ -214,12 +215,10 @@ export default function AdminSidebar() {
           onClick={() => setMobileOpen(false)}
         />
       )}
-
       {/* ─── MOBILE SIDEBAR DRAWER ─── */}
       <div
         className={`md:hidden fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out
-          ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
-        `}
+          ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="flex items-center justify-between px-5 h-16 border-b border-orange-100 flex-shrink-0">
           <span className="font-bold text-xl text-orange-600">ReadyMealz</span>
@@ -231,9 +230,7 @@ export default function AdminSidebar() {
             <X className="h-6 w-6" />
           </button>
         </div>
-
         <SidebarLinks onLinkClick={() => setMobileOpen(false)} />
-
         {admin && (
           <div className="border-t border-orange-100 p-4 flex-shrink-0">
             <div className="flex items-center gap-3 px-2 py-3 mb-3 bg-orange-50/40 rounded-xl">
@@ -245,7 +242,6 @@ export default function AdminSidebar() {
                 <p className="text-sm text-gray-500 truncate">{admin.email}</p>
               </div>
             </div>
-
             <button
               onClick={handleLogout}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition font-medium"
@@ -256,7 +252,6 @@ export default function AdminSidebar() {
           </div>
         )}
       </div>
-
       {/* ─── DESKTOP FIXED SIDEBAR ─── */}
       <aside
         className={`hidden md:flex flex-col fixed top-16 left-0 h-[calc(100vh-4rem)] bg-white border-r border-orange-100 shadow-sm z-30 transition-all duration-300 ease-in-out
@@ -264,7 +259,6 @@ export default function AdminSidebar() {
         `}
       >
         <SidebarLinks />
-
         {admin && (
           <div className="border-t border-orange-100 p-4 flex-shrink-0">
             {!collapsed && (

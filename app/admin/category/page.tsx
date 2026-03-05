@@ -55,17 +55,13 @@ export default function CategoryManagement() {
     open: false,
     id: null,
   });
-
   const fetchCategories = useCallback(async (page: number = 1, search: string = "") => {
     try {
       setFetchLoading(true);
       setCurrentPage(page);
-
       const params: any = { page, limit: 10 };
       if (search.trim()) params.search = search.trim();
-
       const res = await api.get("/category", { params });
-
       if (res.data.success) {
         setCategories(res.data.categories || []);
         setPagination({
@@ -87,7 +83,6 @@ export default function CategoryManagement() {
       setFetchLoading(false);
     }
   }, []);
-
   useEffect(() => {
     fetchCategories(currentPage, searchTerm);
   }, [currentPage, fetchCategories]);
