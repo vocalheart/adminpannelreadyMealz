@@ -28,7 +28,8 @@ const NAV_ITEMS = [
   { href: "/admin/orders", icon: ShoppingBag, label: "Orders" },
   { href: "/admin/meals", icon: Utensils, label: "Meals" },
   { href: "/admin/bulkfood", icon: Utensils, label: "Bulk-Food" },
-   { href: "/admin/bulk-orders", icon: Utensils, label: "Bulk-Orders" },
+  { href: "/admin/bulk-orders", icon: Utensils, label: "Bulk-Orders" },
+  { href: "/admin/tiffin", icon: UserCircle, label: "Tiffins-create" },
   { href: "/admin/users", icon: Users, label: "Users" },
   { href: "/admin/admins", icon: Users, label: "Admins" },
   { href: "/admin/category", icon: Users, label: "Category" },
@@ -38,7 +39,6 @@ const NAV_ITEMS = [
   { href: "/admin/analytics", icon: BarChart3, label: "Analytics" },
   { href: "/admin/settings", icon: Settings, label: "Settings" },
   { href: "/admin/profile", icon: UserCircle, label: "My Profile" },
-
 ];
 
 export default function AdminSidebar() {
@@ -106,8 +106,6 @@ export default function AdminSidebar() {
       })}
     </nav>
   );
-
-
   return (
     <>
       {/* ─── TOP NAVBAR ─── */}
