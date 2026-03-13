@@ -21,21 +21,48 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  LucideIcon,
 } from "lucide-react";
 
-const NAV_ITEMS = [
+type NavItem = {
+  href?: string;
+  icon: LucideIcon;
+  label: string;
+  submenu?: { href: string; label: string }[];
+};
+
+const NAV_ITEMS: NavItem[] = [
   { href: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/admin/orders", icon: ShoppingBag, label: "Orders" },
-  { href: "/admin/meals", icon: Utensils, label: "Meals" },
-  { href: "/admin/bulkfood", icon: Utensils, label: "Bulk-Food" },
-  { href: "/admin/bulk-orders", icon: Utensils, label: "Bulk-Orders" },
-  { href: "/admin/tiffin", icon: UserCircle, label: "Tiffins-create" },
+  {
+    icon: Utensils,
+    label: "Meal Management",
+    submenu: [
+      { href: "/admin/meals", label: "Meals" },
+      { href: "/admin/category", label: "Category" },
+      { href: "/admin/tags", label: "Tags" },
+      { href: "/admin/food-types", label: "Food Types" },
+    ],
+  },
+  {
+    icon: ShoppingBag,
+    label: "Bulk Management",
+    submenu: [
+      { href: "/admin/bulkfood", label: "Bulk Food" },
+      { href: "/admin/bulk-orders", label: "Bulk Orders" },
+    ],
+  },
+  {
+    icon: Utensils,
+    label: "Tiffin Management",
+    submenu: [
+      { href: "/admin/tiffin", label: "Tiffins" },
+      { href: "/admin/subscriptions", label: "Tiffin Subscriptions" },
+    ],
+  },
   { href: "/admin/users", icon: Users, label: "Users" },
   { href: "/admin/admins", icon: Users, label: "Admins" },
-  { href: "/admin/category", icon: Users, label: "Category" },
-  { href: "/admin/tags", icon: UserCircle, label: "Tags" },
-  { href: "/admin/food-types", icon: UserCircle, label: "Food Types" },
-  { href: "/admin/subscriptions", icon: CreditCard, label: "Subscriptions" },
   { href: "/admin/analytics", icon: BarChart3, label: "Analytics" },
   { href: "/admin/settings", icon: Settings, label: "Settings" },
   { href: "/admin/profile", icon: UserCircle, label: "My Profile" },
@@ -48,7 +75,20 @@ export default function AdminSidebar() {
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Auto-expand menu if current path is in submenu
+  useEffect(() => {
+    NAV_ITEMS.forEach((item) => {
+      if (item.submenu) {
+        const isInSubmenu = item.submenu.some((sub) => pathname === sub.href);
+        if (isInSubmenu && !expandedMenus.includes(item.label)) {
+          setExpandedMenus((prev) => [...prev, item.label]);
+        }
+      }
+    });
+  }, [pathname]);
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -79,39 +119,117 @@ export default function AdminSidebar() {
     await logout();
     router.push("/admin/login");
   };
+
+  const toggleMenu = (label: string) => {
+    setExpandedMenus((prev) =>
+      prev.includes(label) ? prev.filter((m) => m !== label) : [...prev, label]
+    );
+  };
+
   if (loading) return null;
+
   const SidebarLinks = ({ onLinkClick }: { onLinkClick?: () => void }) => (
     <nav className="flex-1 overflow-y-auto py-5 px-3 space-y-1.5">
       {NAV_ITEMS.map((item) => {
-        const isActive = pathname === item.href;
+        const isExpandable = !!item.submenu;
+        const isExpanded = expandedMenus.includes(item.label);
+        const isActive = !isExpandable && pathname === item.href;
+        const isSubmenuActive = isExpandable && item.submenu?.some((sub) => pathname === sub.href);
+
         return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onLinkClick}
-            title={collapsed ? item.label : undefined}
-            className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-              ${isActive ? "bg-orange-500 text-white shadow-sm" : "text-gray-700 hover:bg-orange-50 hover:text-orange-600"
-              }
-              ${collapsed ? "justify-center" : ""}
-            `}
-          >
-            <item.icon
-              className={`h-5 w-5 flex-shrink-0 transition-colors ${isActive ? "text-white" : "text-gray-500 group-hover:text-orange-600"
+          <div key={item.label}>
+            {/* Main Item */}
+            {isExpandable ? (
+              <button
+                onClick={() => !collapsed && toggleMenu(item.label)}
+                title={collapsed ? item.label : undefined}
+                className={`w-full group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
+                  ${isSubmenuActive
+                    ? "bg-orange-100 text-orange-700"
+                    : "text-gray-700 hover:bg-orange-50 hover:text-orange-600"
+                  }
+                  ${collapsed ? "justify-center" : ""}
+                `}
+              >
+                <item.icon
+                  className={`h-5 w-5 flex-shrink-0 transition-colors ${
+                    isSubmenuActive ? "text-orange-600" : "text-gray-500 group-hover:text-orange-600"
+                  }`}
+                />
+                {!collapsed && (
+                  <>
+                    <span className="truncate flex-1 text-left">{item.label}</span>
+                    <ChevronDown
+                      className={`h-4 w-4 flex-shrink-0 transition-transform duration-200 ${
+                        isExpanded ? "rotate-180" : ""
+                      }`}
+                    />
+                  </>
+                )}
+              </button>
+            ) : (
+              <Link
+                href={item.href!}
+                onClick={onLinkClick}
+                title={collapsed ? item.label : undefined}
+                className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
+                  ${isActive
+                    ? "bg-orange-500 text-white shadow-sm"
+                    : "text-gray-700 hover:bg-orange-50 hover:text-orange-600"
+                  }
+                  ${collapsed ? "justify-center" : ""}
+                `}
+              >
+                <item.icon
+                  className={`h-5 w-5 flex-shrink-0 transition-colors ${
+                    isActive ? "text-white" : "text-gray-500 group-hover:text-orange-600"
+                  }`}
+                />
+                {!collapsed && <span className="truncate">{item.label}</span>}
+              </Link>
+            )}
+
+            {/* Submenu Items */}
+            {isExpandable && !collapsed && (
+              <div
+                className={`overflow-hidden transition-all duration-200 ${
+                  isExpanded ? "max-h-96" : "max-h-0"
                 }`}
-            />
-            {!collapsed && <span className="truncate">{item.label}</span>}
-          </Link>
+              >
+                <div className="space-y-1.5 mt-1.5 pl-3 border-l-2 border-orange-200 ml-4">
+                  {item.submenu?.map((subitem) => {
+                    const isSubActive = pathname === subitem.href;
+                    return (
+                      <Link
+                        key={subitem.href}
+                        href={subitem.href}
+                        onClick={onLinkClick}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200
+                          ${isSubActive
+                            ? "bg-orange-500 text-white shadow-sm"
+                            : "text-gray-600 hover:bg-orange-50 hover:text-orange-600"
+                          }
+                        `}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-current" />
+                        <span className="truncate">{subitem.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         );
       })}
     </nav>
   );
+
   return (
     <>
       {/* ─── TOP NAVBAR ─── */}
       <nav className="fixed top-0 left-0 right-0 z-50 h-16 bg-white border-b border-orange-100 shadow-sm">
         <div className="flex items-center justify-between h-full px-4 sm:px-6 lg:px-8">
-
           {/* Left */}
           <div className="flex items-center gap-4">
             {/* Mobile hamburger */}
@@ -182,10 +300,11 @@ export default function AdminSidebar() {
                           setDropdownOpen(false);
                           router.push("/admin/profile");
                         }}
-                        className={`w-full flex items-center gap-3 px-5 py-3 text-left transition hover:bg-orange-50 ${pathname === "/admin/profile"
-                          ? "text-orange-600 font-medium bg-orange-50/60"
-                          : "text-gray-700 hover:text-orange-700"
-                          }`}
+                        className={`w-full flex items-center gap-3 px-5 py-3 text-left transition hover:bg-orange-50 ${
+                          pathname === "/admin/profile"
+                            ? "text-orange-600 font-medium bg-orange-50/60"
+                            : "text-gray-700 hover:text-orange-700"
+                        }`}
                       >
                         <UserCircle className="h-5 w-5" />
                         My Profile
@@ -214,6 +333,7 @@ export default function AdminSidebar() {
           onClick={() => setMobileOpen(false)}
         />
       )}
+
       {/* ─── MOBILE SIDEBAR DRAWER ─── */}
       <div
         className={`md:hidden fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out
@@ -251,6 +371,7 @@ export default function AdminSidebar() {
           </div>
         )}
       </div>
+
       {/* ─── DESKTOP FIXED SIDEBAR ─── */}
       <aside
         className={`hidden md:flex flex-col fixed top-16 left-0 h-[calc(100vh-4rem)] bg-white border-r border-orange-100 shadow-sm z-30 transition-all duration-300 ease-in-out
