@@ -6,6 +6,7 @@ import api from "@/app/lib/axios";
 import {
   FaPlus, FaEdit, FaTrashAlt, FaSearch, FaCheckCircle,
   FaTimesCircle, FaImage, FaUpload, FaTrash, FaUtensils,
+  FaTimes, FaRupeeSign , FaCalendar, FaGraduationCap,
 } from "react-icons/fa";
 
 /* ─── Types ─────────────────────────────────── */
@@ -14,11 +15,60 @@ interface TiffinImage {
   key: string;
 }
 
+interface PricingTier {
+  name: "daily" | "weekly" | "monthly";
+  price: number;
+  discount: number;
+}
+
+interface Pricing {
+  basePrice: number;
+  currency: string;
+  tiers: PricingTier[];
+  bulkDiscount?: {
+    minQuantity: number;
+    discountPercentage: number;
+  };
+}
+
+interface ServiceDetails {
+  deliveryDays: string[];
+  deliveryTime: {
+    start: string;
+    end: string;
+  };
+  minDeliveryDistance: number;
+  maxDeliveryDistance: number;
+  isAvailable: boolean;
+  prepareTime: number;
+}
+
+interface MenuItem {
+  name: string;
+  description: string;
+  category: "veg" | "non-veg" | "vegan" | "jain";
+}
+
+interface DietaryInfo {
+  isVegetarian: boolean;
+  isVegan: boolean;
+  isJain: boolean;
+  allergens: string[];
+  noOfServings: number;
+}
+
 interface Tiffin {
   _id: string;
   name: string;
   description: string;
+  htmlDescription?: string;
   image?: TiffinImage;
+  pricing: Pricing;
+  service: ServiceDetails;
+  menuItems: MenuItem[];
+  dietary: DietaryInfo;
+  tags: string[];
+  status: "active" | "inactive" | "archived";
   createdBy?: string;
   createdAt: string;
   updatedAt: string;
@@ -27,30 +77,76 @@ interface Tiffin {
 type FormState = {
   name: string;
   description: string;
+  htmlDescription: string;
+  basePrice: number;
+  currency: string;
+  tiers: PricingTier[];
+  bulkDiscount: { minQuantity: number; discountPercentage: number } | null;
+  deliveryDays: string[];
+  deliveryStartTime: string;
+  deliveryEndTime: string;
+  minDeliveryDistance: number;
+  maxDeliveryDistance: number;
+  isAvailable: boolean;
+  prepareTime: number;
+  menuItems: MenuItem[];
+  isVegetarian: boolean;
+  isVegan: boolean;
+  isJain: boolean;
+  allergens: string[];
+  noOfServings: number;
+  tags: string[];
+  status: "active" | "inactive" | "archived";
 };
 
 const defaultForm: FormState = {
   name: "",
   description: "",
+  htmlDescription: "",
+  basePrice: 0,
+  currency: "INR",
+  tiers: [],
+  bulkDiscount: null,
+  deliveryDays: [],
+  deliveryStartTime: "08:00",
+  deliveryEndTime: "10:00",
+  minDeliveryDistance: 0,
+  maxDeliveryDistance: 50,
+  isAvailable: true,
+  prepareTime: 30,
+  menuItems: [],
+  isVegetarian: false,
+  isVegan: false,
+  isJain: false,
+  allergens: [],
+  noOfServings: 1,
+  tags: [],
+  status: "active",
 };
 
-/* ─── Input class ────────────────────────────── */
 const inputCls = "w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition";
+
+const deliveryDaysOptions = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const categoriesOptions = ["veg", "non-veg", "vegan", "jain"];
+const currencyOptions = ["INR", "USD", "EUR"];
 
 /* ─── Field wrapper ──────────────────────────── */
 const Field = ({
   label,
   required,
   children,
+  description,
 }: {
   label: string;
   required?: boolean;
   children: React.ReactNode;
+  description?: string;
 }) => (
   <div>
     <label className="block text-sm font-medium text-gray-700 mb-1.5">
       {label} {required && <span className="text-red-500">*</span>}
     </label>
+    {description && <p className="text-xs text-gray-500 mb-1.5">{description}</p>}
     {children}
   </div>
 );
@@ -58,13 +154,16 @@ const Field = ({
 /* ─── Section wrapper ────────────────────────── */
 const Section = ({
   title,
+  icon,
   children,
 }: {
   title: string;
+  icon?: React.ReactNode;
   children: React.ReactNode;
 }) => (
   <div className="border border-gray-200 rounded-xl overflow-hidden">
-    <div className="bg-gray-50 px-5 py-3 border-b border-gray-200">
+    <div className="bg-gradient-to-r from-orange-50 to-orange-50/50 px-5 py-3 border-b border-gray-200 flex items-center gap-3">
+      {icon && <span className="text-orange-600 text-lg">{icon}</span>}
       <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
         {title}
       </h3>
@@ -79,6 +178,7 @@ const Section = ({
 export default function TiffinManagement() {
   const [tiffins, setTiffins] = useState<Tiffin[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [editTiffin, setEditTiffin] = useState<Tiffin | null>(null);
   const [form, setForm] = useState<FormState>(defaultForm);
@@ -92,6 +192,7 @@ export default function TiffinManagement() {
   const [fetchLoading, setFetchLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
+  const [currentTab, setCurrentTab] = useState<"basic" | "pricing" | "service" | "menu" | "dietary" | "other">("basic");
 
   /* ── Helpers ── */
   const showMessage = (text: string, type: "success" | "error") => {
@@ -106,7 +207,7 @@ export default function TiffinManagement() {
   const fetchTiffins = useCallback(async () => {
     setFetchLoading(true);
     try {
-      const res = await api.get("/admin/tiffin/");
+      const res = await api.get("/admin/tiffins");
       if (res.data.success) setTiffins(res.data.data || []);
     } catch (err: any) {
       showMessage(err?.response?.data?.message || "Failed to load tiffins", "error");
@@ -123,6 +224,7 @@ export default function TiffinManagement() {
     setForm(defaultForm);
     setNewImage(null);
     setImagePreview(null);
+    setCurrentTab("basic");
     setModalOpen(true);
   };
 
@@ -132,9 +234,30 @@ export default function TiffinManagement() {
     setForm({
       name: tiffin.name,
       description: tiffin.description,
+      htmlDescription: tiffin.htmlDescription || "",
+      basePrice: tiffin.pricing.basePrice,
+      currency: tiffin.pricing.currency,
+      tiers: tiffin.pricing.tiers || [],
+      bulkDiscount: tiffin.pricing.bulkDiscount || null,
+      deliveryDays: tiffin.service.deliveryDays,
+      deliveryStartTime: tiffin.service.deliveryTime.start || "08:00",
+      deliveryEndTime: tiffin.service.deliveryTime.end || "10:00",
+      minDeliveryDistance: tiffin.service.minDeliveryDistance,
+      maxDeliveryDistance: tiffin.service.maxDeliveryDistance,
+      isAvailable: tiffin.service.isAvailable,
+      prepareTime: tiffin.service.prepareTime,
+      menuItems: tiffin.menuItems || [],
+      isVegetarian: tiffin.dietary.isVegetarian,
+      isVegan: tiffin.dietary.isVegan,
+      isJain: tiffin.dietary.isJain,
+      allergens: tiffin.dietary.allergens,
+      noOfServings: tiffin.dietary.noOfServings,
+      tags: tiffin.tags,
+      status: tiffin.status,
     });
     setNewImage(null);
     setImagePreview(null);
+    setCurrentTab("basic");
     setModalOpen(true);
   };
 
@@ -151,27 +274,97 @@ export default function TiffinManagement() {
     }
   };
 
+  /* ── Add pricing tier ── */
+  const addPricingTier = () => {
+    setField("tiers", [
+      ...form.tiers,
+      { name: "daily", price: 0, discount: 0 },
+    ]);
+  };
+
+  const updateTier = (idx: number, field: keyof PricingTier, val: any) => {
+    const newTiers = [...form.tiers];
+    newTiers[idx] = { ...newTiers[idx], [field]: val };
+    setField("tiers", newTiers);
+  };
+
+  const removeTier = (idx: number) => {
+    setField("tiers", form.tiers.filter((_, i) => i !== idx));
+  };
+
+  /* ── Add menu item ── */
+  const addMenuItem = () => {
+    setField("menuItems", [
+      ...form.menuItems,
+      { name: "", description: "", category: "veg" },
+    ]);
+  };
+
+  const updateMenuItem = (idx: number, field: keyof MenuItem, val: any) => {
+    const newItems = [...form.menuItems];
+    newItems[idx] = { ...newItems[idx], [field]: val };
+    setField("menuItems", newItems);
+  };
+
+  const removeMenuItem = (idx: number) => {
+    setField("menuItems", form.menuItems.filter((_, i) => i !== idx));
+  };
+
   /* ── Submit create / update ── */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.description.trim()) {
-      showMessage("Name and description are required", "error");
+    if (!form.name.trim() || !form.description.trim() || form.basePrice <= 0) {
+      showMessage("Name, description, and price are required", "error");
       return;
     }
 
     try {
       setLoading(true);
 
+      const data = new FormData();
+      data.append("name", form.name.trim());
+      data.append("description", form.description.trim());
+      data.append("htmlDescription", form.htmlDescription.trim());
+      
+      data.append("pricing", JSON.stringify({
+        basePrice: form.basePrice,
+        currency: form.currency,
+        tiers: form.tiers,
+        bulkDiscount: form.bulkDiscount,
+      }));
+
+      data.append("service", JSON.stringify({
+        deliveryDays: form.deliveryDays,
+        deliveryTime: {
+          start: form.deliveryStartTime,
+          end: form.deliveryEndTime,
+        },
+        minDeliveryDistance: form.minDeliveryDistance,
+        maxDeliveryDistance: form.maxDeliveryDistance,
+        isAvailable: form.isAvailable,
+        prepareTime: form.prepareTime,
+      }));
+
+      data.append("menuItems", JSON.stringify(form.menuItems));
+
+      data.append("dietary", JSON.stringify({
+        isVegetarian: form.isVegetarian,
+        isVegan: form.isVegan,
+        isJain: form.isJain,
+        allergens: form.allergens,
+        noOfServings: form.noOfServings,
+      }));
+
+      data.append("tags", form.tags.join(","));
+      data.append("status", form.status);
+
+      if (newImage) {
+        data.append("image", newImage);
+      }
+
       if (editTiffin) {
         /* ── UPDATE ── */
-        const data = new FormData();
-        data.append("name", form.name.trim());
-        data.append("description", form.description.trim());
-        if (newImage) {
-          data.append("image", newImage);
-        }
-
-        const res = await api.put(`/admin/tiffin/update-tiffin/${editTiffin._id}`, data, {
+        const res = await api.put(`/admin/update-tiffin/${editTiffin._id}`, data, {
           headers: { "Content-Type": "multipart/form-data" },
         });
         if (res.data.success) {
@@ -188,12 +381,7 @@ export default function TiffinManagement() {
           setLoading(false);
           return;
         }
-        const data = new FormData();
-        data.append("name", form.name.trim());
-        data.append("description", form.description.trim());
-        data.append("image", newImage);
-
-        const res = await api.post("/admin/tiffin/create-tiffin", data, {
+        const res = await api.post("/admin/create-tiffin", data, {
           headers: { "Content-Type": "multipart/form-data" },
         });
         if (res.data.success) {
@@ -216,7 +404,7 @@ export default function TiffinManagement() {
     if (!deleteModal.id) return;
     try {
       setLoading(true);
-      const res = await api.delete(`/admin/tiffin/delete-tiffin/${deleteModal.id}`);
+      const res = await api.delete(`/admin/delete-tiffin/${deleteModal.id}`);
       if (res.data.success) {
         showMessage("Tiffin deleted", "success");
         fetchTiffins();
@@ -230,10 +418,12 @@ export default function TiffinManagement() {
   };
 
   /* ── Filtered list ── */
-  const filtered = tiffins.filter((t) =>
-    t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = tiffins.filter((t) => {
+    const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || t.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   /* ─────────────── RENDER ─────────────── */
   return (
@@ -248,7 +438,9 @@ export default function TiffinManagement() {
                 <FaUtensils className="text-orange-600" />
                 Tiffin Management
               </h1>
-              <p className="text-gray-500 mt-1 text-sm">{tiffins.length} tiffins total</p>
+              <p className="text-gray-500 mt-1 text-sm">
+                {tiffins.length} tiffins • {tiffins.filter(t => t.status === "active").length} active
+              </p>
             </div>
             <button
               onClick={openCreate}
@@ -270,9 +462,9 @@ export default function TiffinManagement() {
             </div>
           )}
 
-          {/* Search */}
-          <div className="mb-6">
-            <div className="relative max-w-md">
+          {/* Search & Filter */}
+          <div className="mb-6 flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1 max-w-md">
               <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
               <input
                 type="text"
@@ -282,6 +474,16 @@ export default function TiffinManagement() {
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none"
               />
             </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="archived">Archived</option>
+            </select>
           </div>
 
           {/* Grid */}
@@ -310,12 +512,23 @@ export default function TiffinManagement() {
                         <FaImage className="text-4xl text-gray-300" />
                       </div>
                     )}
+                    <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold text-white ${
+                      tiffin.status === "active" ? "bg-green-500" : 
+                      tiffin.status === "inactive" ? "bg-yellow-500" : "bg-gray-500"
+                    }`}>
+                      {tiffin.status}
+                    </div>
                   </div>
 
                   {/* Content */}
                   <div className="p-4">
                     <h3 className="text-lg font-semibold text-gray-900 truncate">{tiffin.name}</h3>
                     <p className="text-sm text-gray-500 mt-1 line-clamp-2">{tiffin.description}</p>
+                    
+                    <div className="mt-3 flex items-center gap-2 text-sm font-semibold text-orange-600">
+                      <FaRupeeSign  className="text-xs" />
+                      {tiffin.pricing.basePrice} / {tiffin.pricing.currency}
+                    </div>
                     
                     <div className="mt-4 flex gap-2">
                       <button
@@ -340,7 +553,7 @@ export default function TiffinManagement() {
           {/* ══════════ CREATE / EDIT MODAL ══════════ */}
           {modalOpen && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center z-50 p-4 overflow-y-auto">
-              <div className="bg-white rounded-2xl w-full max-w-2xl my-8 shadow-2xl">
+              <div className="bg-white rounded-2xl w-full max-w-4xl my-8 shadow-2xl">
 
                 {/* Modal Header */}
                 <div className="flex justify-between items-center px-8 py-5 border-b border-gray-100 sticky top-0 bg-white z-10 rounded-t-2xl">
@@ -355,87 +568,449 @@ export default function TiffinManagement() {
                   </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="px-8 py-6 space-y-6">
+                {/* Tabs */}
+                <div className="flex border-b border-gray-200 px-8 bg-gray-50/50 overflow-x-auto">
+                  {["basic", "pricing", "service", "menu", "dietary", "other"].map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setCurrentTab(tab as any)}
+                      className={`px-4 py-3 text-sm font-medium border-b-2 transition whitespace-nowrap ${
+                        currentTab === tab
+                          ? "border-orange-600 text-orange-600"
+                          : "border-transparent text-gray-600 hover:text-gray-900"
+                      }`}
+                    >
+                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    </button>
+                  ))}
+                </div>
 
-                  {/* ── Basic Info ── */}
-                  <Section title="Basic Information">
-                    <div className="space-y-5">
-                      <Field label="Name" required>
-                        <input
-                          type="text"
-                          value={form.name}
-                          onChange={(e) => setField("name", e.target.value)}
-                          className={inputCls}
-                          placeholder="e.g. Home-style Dal Makhani"
-                          required
-                        />
-                      </Field>
-                      <Field label="Description" required>
-                        <textarea
-                          value={form.description}
-                          onChange={(e) => setField("description", e.target.value)}
-                          rows={4}
-                          className={inputCls}
-                          placeholder="Describe your tiffin dish, ingredients, and preparation details..."
-                          required
-                        />
-                      </Field>
-                    </div>
-                  </Section>
+                <form onSubmit={handleSubmit} className="px-8 py-6 space-y-6 max-h-[calc(100vh-300px)] overflow-y-auto">
 
-                  {/* ── Image ── */}
-                  <Section title={editTiffin ? "Update Image (optional)" : "Image (required)"}>
+                  {/* ═══ BASIC TAB ═══ */}
+                  {currentTab === "basic" && (
+                    <>
+                      <Section title="Basic Information" icon={<FaUtensils />}>
+                        <div className="space-y-5">
+                          <Field label="Name" required>
+                            <input
+                              type="text"
+                              value={form.name}
+                              onChange={(e) => setField("name", e.target.value)}
+                              className={inputCls}
+                              placeholder="e.g. Home-style Dal Makhani"
+                              required
+                            />
+                          </Field>
+                          <Field label="Description" required>
+                            <textarea
+                              value={form.description}
+                              onChange={(e) => setField("description", e.target.value)}
+                              rows={4}
+                              className={inputCls}
+                              placeholder="Describe your tiffin dish, ingredients, and preparation details..."
+                              required
+                            />
+                          </Field>
+                          <Field label="HTML Description (Rich Text)" description="Optional: HTML for detailed product description">
+                            <textarea
+                              value={form.htmlDescription}
+                              onChange={(e) => setField("htmlDescription", e.target.value)}
+                              rows={4}
+                              className={inputCls}
+                              placeholder="<h2>Premium Tiffin</h2><p>Details...</p>"
+                            />
+                          </Field>
+                          <Field label="Status" required>
+                            <select
+                              value={form.status}
+                              onChange={(e) => setField("status", e.target.value as any)}
+                              className={inputCls}
+                            >
+                              <option value="active">Active</option>
+                              <option value="inactive">Inactive</option>
+                              <option value="archived">Archived</option>
+                            </select>
+                          </Field>
+                        </div>
+                      </Section>
 
-                    {/* Current image in edit mode */}
-                    {editTiffin && editTiffin.image?.url && !imagePreview && (
-                      <div className="mb-5">
-                        <p className="text-xs font-medium text-gray-500 uppercase mb-3">Current Image</p>
-                        <div className="relative rounded-lg overflow-hidden border border-gray-200 aspect-video max-w-xs">
-                          <img src={editTiffin.image.url} alt="" className="w-full h-full object-cover" />
-                          <button
-                            type="button"
-                            onClick={() => setNewImage(null)}
-                            className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex items-center justify-center transition"
-                          >
-                            <FaTrash className="text-white text-lg" />
-                          </button>
+                      <Section title="Image" icon={<FaImage />}>
+                        {editTiffin && editTiffin.image?.url && !imagePreview && (
+                          <div className="mb-5">
+                            <p className="text-xs font-medium text-gray-500 uppercase mb-3">Current Image</p>
+                            <div className="relative rounded-lg overflow-hidden border border-gray-200 aspect-video max-w-xs">
+                              <img src={editTiffin.image.url} alt="" className="w-full h-full object-cover" />
+                            </div>
+                          </div>
+                        )}
+
+                        {imagePreview && (
+                          <div className="mb-5">
+                            <p className="text-xs font-medium text-gray-500 uppercase mb-3">New Image Preview</p>
+                            <div className="relative rounded-lg overflow-hidden border border-gray-200 aspect-video max-w-xs">
+                              <img src={imagePreview} alt="preview" className="w-full h-full object-cover" />
+                            </div>
+                          </div>
+                        )}
+
+                        <label className="cursor-pointer inline-flex items-center gap-2 border-2 border-dashed border-orange-300 hover:border-orange-400 bg-orange-50 hover:bg-orange-100 px-5 py-3 rounded-xl text-orange-700 font-medium text-sm transition">
+                          <FaUpload /> {imagePreview ? "Change Image" : "Upload Image"}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageSelect}
+                            className="hidden"
+                          />
+                        </label>
+                      </Section>
+                    </>
+                  )}
+
+                  {/* ═══ PRICING TAB ═══ */}
+                  {currentTab === "pricing" && (
+                    <Section title="Pricing" icon={<FaRupeeSign  />}>
+                      <div className="space-y-5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                          <Field label="Base Price" required>
+                            <input
+                              type="number"
+                              value={form.basePrice}
+                              onChange={(e) => setField("basePrice", parseFloat(e.target.value))}
+                              className={inputCls}
+                              placeholder="250"
+                              required
+                            />
+                          </Field>
+                          <Field label="Currency">
+                            <select
+                              value={form.currency}
+                              onChange={(e) => setField("currency", e.target.value)}
+                              className={inputCls}
+                            >
+                              {currencyOptions.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                          </Field>
+                        </div>
+
+                        {/* Pricing Tiers */}
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <label className="text-sm font-medium text-gray-700">Pricing Tiers</label>
+                            <button
+                              type="button"
+                              onClick={addPricingTier}
+                              className="text-xs bg-orange-100 hover:bg-orange-200 text-orange-700 px-3 py-1 rounded-lg transition"
+                            >
+                              + Add Tier
+                            </button>
+                          </div>
+                          <div className="space-y-3">
+                            {form.tiers.map((tier, idx) => (
+                              <div key={idx} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
+                                <select
+                                  value={tier.name}
+                                  onChange={(e) => updateTier(idx, "name", e.target.value)}
+                                  className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm"
+                                >
+                                  <option value="daily">Daily</option>
+                                  <option value="weekly">Weekly</option>
+                                  <option value="monthly">Monthly</option>
+                                </select>
+                                <input
+                                  type="number"
+                                  value={tier.price}
+                                  onChange={(e) => updateTier(idx, "price", parseFloat(e.target.value))}
+                                  placeholder="Price"
+                                  className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm"
+                                />
+                                <input
+                                  type="number"
+                                  value={tier.discount}
+                                  onChange={(e) => updateTier(idx, "discount", parseFloat(e.target.value))}
+                                  placeholder="Discount %"
+                                  className="w-24 border border-gray-300 rounded px-3 py-2 text-sm"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeTier(idx)}
+                                  className="p-2 text-red-600 hover:bg-red-50 rounded transition"
+                                >
+                                  <FaTrash />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Bulk Discount */}
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                          <label className="flex items-center gap-2 cursor-pointer mb-3">
+                            <input
+                              type="checkbox"
+                              checked={!!form.bulkDiscount}
+                              onChange={(e) => setField("bulkDiscount", e.target.checked ? { minQuantity: 100, discountPercentage: 10 } : null)}
+                              className="rounded"
+                            />
+                            <span className="text-sm font-medium text-gray-700">Enable Bulk Discount</span>
+                          </label>
+                          {form.bulkDiscount && (
+                            <div className="grid grid-cols-2 gap-3">
+                              <input
+                                type="number"
+                                value={form.bulkDiscount.minQuantity}
+                                onChange={(e) => setField("bulkDiscount", { ...form.bulkDiscount!, minQuantity: parseInt(e.target.value) })}
+                                placeholder="Min Quantity"
+                                className="border border-gray-300 rounded px-3 py-2 text-sm"
+                              />
+                              <input
+                                type="number"
+                                value={form.bulkDiscount.discountPercentage}
+                                onChange={(e) => setField("bulkDiscount", { ...form.bulkDiscount!, discountPercentage: parseFloat(e.target.value) })}
+                                placeholder="Discount %"
+                                className="border border-gray-300 rounded px-3 py-2 text-sm"
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
-                    )}
+                    </Section>
+                  )}
 
-                    {/* New image preview */}
-                    {imagePreview && (
-                      <div className="mb-5">
-                        <p className="text-xs font-medium text-gray-500 uppercase mb-3">New Image Preview</p>
-                        <div className="relative rounded-lg overflow-hidden border border-gray-200 aspect-video max-w-xs">
-                          <img src={imagePreview} alt="preview" className="w-full h-full object-cover" />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setNewImage(null);
-                              setImagePreview(null);
-                            }}
-                            className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex items-center justify-center transition"
-                          >
-                            <FaTrash className="text-white text-lg" />
-                          </button>
+                  {/* ═══ SERVICE TAB ═══ */}
+                  {currentTab === "service" && (
+                    <Section title="Delivery Service" icon={<FaCalendar />}>
+                      <div className="space-y-5">
+                        <Field label="Delivery Days">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            {deliveryDaysOptions.map(day => (
+                              <label key={day} className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={form.deliveryDays.includes(day)}
+                                  onChange={(e) => {
+                                    const days = e.target.checked 
+                                      ? [...form.deliveryDays, day]
+                                      : form.deliveryDays.filter(d => d !== day);
+                                    setField("deliveryDays", days);
+                                  }}
+                                  className="rounded"
+                                />
+                                <span className="text-sm text-gray-700">{day}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </Field>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                          <Field label="Delivery Start Time">
+                            <input
+                              type="time"
+                              value={form.deliveryStartTime}
+                              onChange={(e) => setField("deliveryStartTime", e.target.value)}
+                              className={inputCls}
+                            />
+                          </Field>
+                          <Field label="Delivery End Time">
+                            <input
+                              type="time"
+                              value={form.deliveryEndTime}
+                              onChange={(e) => setField("deliveryEndTime", e.target.value)}
+                              className={inputCls}
+                            />
+                          </Field>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                          <Field label="Min Delivery Distance (km)">
+                            <input
+                              type="number"
+                              value={form.minDeliveryDistance}
+                              onChange={(e) => setField("minDeliveryDistance", parseFloat(e.target.value))}
+                              className={inputCls}
+                            />
+                          </Field>
+                          <Field label="Max Delivery Distance (km)">
+                            <input
+                              type="number"
+                              value={form.maxDeliveryDistance}
+                              onChange={(e) => setField("maxDeliveryDistance", parseFloat(e.target.value))}
+                              className={inputCls}
+                            />
+                          </Field>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                          <Field label="Preparation Time (minutes)">
+                            <input
+                              type="number"
+                              value={form.prepareTime}
+                              onChange={(e) => setField("prepareTime", parseInt(e.target.value))}
+                              className={inputCls}
+                            />
+                          </Field>
+                          <Field label="Availability">
+                            <select
+                              value={form.isAvailable ? "yes" : "no"}
+                              onChange={(e) => setField("isAvailable", e.target.value === "yes")}
+                              className={inputCls}
+                            >
+                              <option value="yes">Available</option>
+                              <option value="no">Unavailable</option>
+                            </select>
+                          </Field>
                         </div>
                       </div>
-                    )}
+                    </Section>
+                  )}
 
-                    <label className="cursor-pointer inline-flex items-center gap-2 border-2 border-dashed border-orange-300 hover:border-orange-400 bg-orange-50 hover:bg-orange-100 px-5 py-3 rounded-xl text-orange-700 font-medium text-sm transition">
-                      <FaUpload /> {imagePreview ? "Change Image" : "Upload Image"}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageSelect}
-                        className="hidden"
-                      />
-                    </label>
-                  </Section>
+                  {/* ═══ MENU TAB ═══ */}
+                  {currentTab === "menu" && (
+                    <Section title="Menu Items" icon={<FaUtensils />}>
+                      <div>
+                        <div className="flex items-center justify-between mb-4">
+                          <label className="text-sm font-medium text-gray-700">Items Included</label>
+                          <button
+                            type="button"
+                            onClick={addMenuItem}
+                            className="text-xs bg-orange-100 hover:bg-orange-200 text-orange-700 px-3 py-1 rounded-lg transition"
+                          >
+                            + Add Item
+                          </button>
+                        </div>
+                        <div className="space-y-3">
+                          {form.menuItems.map((item, idx) => (
+                            <div key={idx} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                              <div className="grid grid-cols-1 gap-3 mb-3">
+                                <input
+                                  type="text"
+                                  value={item.name}
+                                  onChange={(e) => updateMenuItem(idx, "name", e.target.value)}
+                                  placeholder="Item name"
+                                  className="border border-gray-300 rounded px-3 py-2 text-sm"
+                                />
+                                <textarea
+                                  value={item.description}
+                                  onChange={(e) => updateMenuItem(idx, "description", e.target.value)}
+                                  placeholder="Item description"
+                                  rows={2}
+                                  className="border border-gray-300 rounded px-3 py-2 text-sm"
+                                />
+                                <select
+                                  value={item.category}
+                                  onChange={(e) => updateMenuItem(idx, "category", e.target.value)}
+                                  className="border border-gray-300 rounded px-3 py-2 text-sm"
+                                >
+                                  {categoriesOptions.map(cat => <option key={cat} value={cat}>{cat.toUpperCase()}</option>)}
+                                </select>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeMenuItem(idx)}
+                                className="text-xs text-red-600 hover:bg-red-50 px-3 py-1 rounded transition"
+                              >
+                                Remove Item
+                              </button>
+                            </div>
+                          ))}
+                          {form.menuItems.length === 0 && (
+                            <p className="text-sm text-gray-500 text-center py-4">No items added yet</p>
+                          )}
+                        </div>
+                      </div>
+                    </Section>
+                  )}
+
+                  {/* ═══ DIETARY TAB ═══ */}
+                  {currentTab === "dietary" && (
+                    <Section title="Dietary Information" icon={<FaGraduationCap />}>
+                      <div className="space-y-5">
+                        <div className="space-y-3">
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={form.isVegetarian}
+                              onChange={(e) => setField("isVegetarian", e.target.checked)}
+                              className="rounded"
+                            />
+                            <span className="text-sm font-medium text-gray-700">Vegetarian</span>
+                          </label>
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={form.isVegan}
+                              onChange={(e) => setField("isVegan", e.target.checked)}
+                              className="rounded"
+                            />
+                            <span className="text-sm font-medium text-gray-700">Vegan</span>
+                          </label>
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={form.isJain}
+                              onChange={(e) => setField("isJain", e.target.checked)}
+                              className="rounded"
+                            />
+                            <span className="text-sm font-medium text-gray-700">Jain</span>
+                          </label>
+                        </div>
+
+                        <div>
+                          <Field label="Number of Servings">
+                            <input
+                              type="number"
+                              value={form.noOfServings}
+                              onChange={(e) => setField("noOfServings", parseInt(e.target.value))}
+                              className={inputCls}
+                              min="1"
+                            />
+                          </Field>
+                        </div>
+
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 mb-2 block">Allergens</label>
+                          <div className="flex flex-wrap gap-2">
+                            {["nuts", "dairy", "gluten", "soy", "sesame", "fish"].map(allergen => (
+                              <label key={allergen} className="flex items-center gap-2 cursor-pointer px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                <input
+                                  type="checkbox"
+                                  checked={form.allergens.includes(allergen)}
+                                  onChange={(e) => {
+                                    const allergens = e.target.checked
+                                      ? [...form.allergens, allergen]
+                                      : form.allergens.filter(a => a !== allergen);
+                                    setField("allergens", allergens);
+                                  }}
+                                  className="rounded"
+                                />
+                                <span className="text-sm text-gray-700">{allergen.charAt(0).toUpperCase() + allergen.slice(1)}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </Section>
+                  )}
+
+                  {/* ═══ OTHER TAB ═══ */}
+                  {currentTab === "other" && (
+                    <Section title="Tags & Additional Info">
+                      <div className="space-y-5">
+                        <Field label="Tags" description="Enter tags separated by commas (e.g. homemade, organic, fast-delivery)">
+                          <textarea
+                            value={form.tags.join(", ")}
+                            onChange={(e) => setField("tags", e.target.value.split(",").map(t => t.trim()).filter(Boolean))}
+                            rows={3}
+                            className={inputCls}
+                            placeholder="homemade, organic, fast-delivery"
+                          />
+                        </Field>
+                      </div>
+                    </Section>
+                  )}
 
                   {/* Submit */}
-                  <div className="flex gap-4 pt-2">
+                  <div className="flex gap-4 pt-4 border-t border-gray-200">
                     <button
                       type="submit"
                       disabled={loading}
