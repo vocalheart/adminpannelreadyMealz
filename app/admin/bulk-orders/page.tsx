@@ -7,6 +7,7 @@ import {
   Search, Eye, Trash2, ChevronLeft, ChevronRight,
   CheckCircle, XCircle, Clock, Phone, Mail, Building2,
   CalendarDays, Package, Users, IndianRupee, RefreshCw,
+  CreditCard, Hash, AlertCircle, ShieldCheck,
 } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────── */
@@ -31,6 +32,9 @@ interface Quote {
   requirements?: string;
   estimatedTotal: number;
   status: "pending" | "contacted" | "confirmed" | "cancelled";
+  paymentStatus: "pending" | "paid" | "failed";
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
   createdAt: string;
 }
 
@@ -43,6 +47,31 @@ const STATUS_CONFIG: Record<
   contacted: { label: "Contacted", cls: "bg-blue-50 text-blue-700 border-blue-200",       dot: "bg-blue-400"   },
   confirmed: { label: "Confirmed", cls: "bg-green-50 text-green-700 border-green-200",    dot: "bg-green-500"  },
   cancelled: { label: "Cancelled", cls: "bg-red-50 text-red-600 border-red-200",          dot: "bg-red-400"    },
+};
+
+/* ─── Payment Status config ──────────────────── */
+const PAYMENT_CONFIG: Record<
+  Quote["paymentStatus"],
+  { label: string; cls: string; dot: string; icon: React.ReactNode }
+> = {
+  pending: {
+    label: "Unpaid",
+    cls: "bg-yellow-50 text-yellow-700 border-yellow-200",
+    dot: "bg-yellow-400",
+    icon: <Clock className="w-3 h-3" />,
+  },
+  paid: {
+    label: "Paid",
+    cls: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    dot: "bg-emerald-500",
+    icon: <ShieldCheck className="w-3 h-3" />,
+  },
+  failed: {
+    label: "Failed",
+    cls: "bg-red-50 text-red-600 border-red-200",
+    dot: "bg-red-400",
+    icon: <AlertCircle className="w-3 h-3" />,
+  },
 };
 
 const STATUS_OPTIONS: Quote["status"][] = ["pending", "contacted", "confirmed", "cancelled"];
@@ -68,6 +97,17 @@ function StatusBadge({ status }: { status: Quote["status"] }) {
   );
 }
 
+/* ─── Payment Badge ──────────────────────────── */
+function PaymentBadge({ status }: { status: Quote["paymentStatus"] }) {
+  const cfg = PAYMENT_CONFIG[status];
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.cls}`}>
+      {cfg.icon}
+      {cfg.label}
+    </span>
+  );
+}
+
 /* ─── Detail Modal ───────────────────────────── */
 function DetailModal({
   quote,
@@ -81,8 +121,10 @@ function DetailModal({
   statusLoading: boolean;
 }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div className="bg-white rounded-2xl w-full max-w-2xl my-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
 
         {/* Header */}
@@ -91,10 +133,13 @@ function DetailModal({
             <h2 className="text-lg font-bold text-gray-900">Quote Details</h2>
             <p className="text-xs text-gray-400 mt-0.5">Submitted {fmtDateTime(quote.createdAt)}</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <PaymentBadge status={quote.paymentStatus} />
             <StatusBadge status={quote.status} />
-            <button onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition text-xl">×</button>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition text-xl"
+            >×</button>
           </div>
         </div>
 
@@ -104,8 +149,11 @@ function DetailModal({
           {quote.bulkOrder && (
             <div className="flex items-center gap-3 p-3 bg-orange-50 border border-orange-100 rounded-xl">
               {quote.bulkOrder.imageUrl?.[0]?.url ? (
-                <img src={quote.bulkOrder.imageUrl[0].url} alt={quote.bulkOrder.name}
-                  className="w-12 h-12 rounded-lg object-cover border border-orange-200 flex-shrink-0" />
+                <img
+                  src={quote.bulkOrder.imageUrl[0].url}
+                  alt={quote.bulkOrder.name}
+                  className="w-12 h-12 rounded-lg object-cover border border-orange-200 flex-shrink-0"
+                />
               ) : (
                 <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center text-2xl flex-shrink-0">🍽️</div>
               )}
@@ -127,9 +175,9 @@ function DetailModal({
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Customer Information</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <InfoRow icon={<Users className="w-4 h-4" />}   label="Name"    value={quote.name} />
-              <InfoRow icon={<Mail className="w-4 h-4" />}    label="Email"   value={quote.email} />
-              <InfoRow icon={<Phone className="w-4 h-4" />}   label="Phone"   value={quote.phone} />
+              <InfoRow icon={<Users className="w-4 h-4" />}    label="Name"    value={quote.name} />
+              <InfoRow icon={<Mail className="w-4 h-4" />}     label="Email"   value={quote.email} />
+              <InfoRow icon={<Phone className="w-4 h-4" />}    label="Phone"   value={quote.phone} />
               {quote.company && (
                 <InfoRow icon={<Building2 className="w-4 h-4" />} label="Company" value={quote.company} />
               )}
@@ -147,6 +195,49 @@ function DetailModal({
             </div>
           </div>
 
+          {/* Payment Info */}
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Payment Information</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Payment Status display */}
+              <div className="flex items-start gap-2 bg-gray-50 rounded-xl p-3">
+                <span className="text-gray-400 mt-0.5 shrink-0"><CreditCard className="w-4 h-4" /></span>
+                <div>
+                  <p className="text-xs text-gray-400">Payment Status</p>
+                  <div className="mt-1">
+                    <PaymentBadge status={quote.paymentStatus} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Razorpay Order ID */}
+              <div className="flex items-start gap-2 bg-gray-50 rounded-xl p-3">
+                <span className="text-gray-400 mt-0.5 shrink-0"><Hash className="w-4 h-4" /></span>
+                <div className="min-w-0">
+                  <p className="text-xs text-gray-400">Razorpay Order ID</p>
+                  {quote.razorpayOrderId ? (
+                    <p className="text-xs font-mono font-medium text-gray-700 mt-0.5 break-all">{quote.razorpayOrderId}</p>
+                  ) : (
+                    <p className="text-xs text-gray-400 mt-0.5 italic">Not generated</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Razorpay Payment ID */}
+              <div className="flex items-start gap-2 bg-gray-50 rounded-xl p-3 sm:col-span-2">
+                <span className="text-gray-400 mt-0.5 shrink-0"><ShieldCheck className="w-4 h-4" /></span>
+                <div className="min-w-0">
+                  <p className="text-xs text-gray-400">Razorpay Payment ID</p>
+                  {quote.razorpayPaymentId ? (
+                    <p className="text-xs font-mono font-medium text-emerald-700 mt-0.5 break-all">{quote.razorpayPaymentId}</p>
+                  ) : (
+                    <p className="text-xs text-gray-400 mt-0.5 italic">Not captured</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Requirements */}
           {quote.requirements && (
             <div>
@@ -157,20 +248,22 @@ function DetailModal({
 
           {/* Status update */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Update Status</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Update Quote Status</p>
             <div className="flex flex-wrap gap-2">
               {STATUS_OPTIONS.map((s) => {
                 const cfg = STATUS_CONFIG[s];
                 const isActive = quote.status === s;
                 return (
-                  <button key={s}
+                  <button
+                    key={s}
                     disabled={statusLoading || isActive}
                     onClick={() => onStatusChange(quote._id, s)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
                       isActive
                         ? cfg.cls + " cursor-default"
                         : "bg-white border-gray-200 text-gray-600 hover:border-gray-400"
-                    } disabled:opacity-60`}>
+                    } disabled:opacity-60`}
+                  >
                     <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
                     {cfg.label}
                   </button>
@@ -186,7 +279,11 @@ function DetailModal({
 }
 
 /* ─── InfoRow ────────────────────────────────── */
-function InfoRow({ icon, label, value, bold }: { icon: React.ReactNode; label: string; value: string; bold?: boolean }) {
+function InfoRow({
+  icon, label, value, bold,
+}: {
+  icon: React.ReactNode; label: string; value: string; bold?: boolean;
+}) {
   return (
     <div className="flex items-start gap-2 bg-gray-50 rounded-xl p-3">
       <span className="text-gray-400 mt-0.5 shrink-0">{icon}</span>
@@ -202,19 +299,20 @@ function InfoRow({ icon, label, value, bold }: { icon: React.ReactNode; label: s
    MAIN PAGE
 ════════════════════════════════════════════ */
 export default function BulkQuotesAdminPage() {
-  const [quotes, setQuotes]         = useState<Quote[]>([]);
-  const [total, setTotal]           = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
+  const [quotes, setQuotes]           = useState<Quote[]>([]);
+  const [total, setTotal]             = useState(0);
+  const [totalPages, setTotalPages]   = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const [search, setSearch]               = useState("");
-  const [filterStatus, setFilterStatus]   = useState<string>("");
-  const [loading, setLoading]             = useState(false);
-  const [statusLoading, setStatusLoading] = useState(false);
-  const [message, setMessage]             = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [search, setSearch]                     = useState("");
+  const [filterStatus, setFilterStatus]         = useState<string>("");
+  const [filterPayment, setFilterPayment]       = useState<string>("");
+  const [loading, setLoading]                   = useState(false);
+  const [statusLoading, setStatusLoading]       = useState(false);
+  const [message, setMessage]                   = useState<{ text: string; type: "success" | "error" } | null>(null);
 
-  const [detailQuote, setDetailQuote]     = useState<Quote | null>(null);
-  const [deleteModal, setDeleteModal]     = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
+  const [detailQuote, setDetailQuote]   = useState<Quote | null>(null);
+  const [deleteModal, setDeleteModal]   = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
 
   const LIMIT = 12;
 
@@ -228,8 +326,9 @@ export default function BulkQuotesAdminPage() {
     setLoading(true);
     try {
       const params: Record<string, any> = { page, limit: LIMIT };
-      if (search.trim())  params.search = search.trim();
-      if (filterStatus)   params.status = filterStatus;
+      if (search.trim())   params.search        = search.trim();
+      if (filterStatus)    params.status        = filterStatus;
+      if (filterPayment)   params.paymentStatus = filterPayment;
 
       const res = await api.get("/bulk-quotes", { params });
       if (res.data.success) {
@@ -242,9 +341,9 @@ export default function BulkQuotesAdminPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, filterStatus]);
+  }, [search, filterStatus, filterPayment]);
 
-  useEffect(() => { setCurrentPage(1); fetchQuotes(1); }, [filterStatus]);
+  useEffect(() => { setCurrentPage(1); fetchQuotes(1); }, [filterStatus, filterPayment]);
   useEffect(() => {
     const t = setTimeout(() => { setCurrentPage(1); fetchQuotes(1); }, 400);
     return () => clearTimeout(t);
@@ -292,6 +391,11 @@ export default function BulkQuotesAdminPage() {
     return acc;
   }, {});
 
+  const paymentCounts = quotes.reduce<Record<string, number>>((acc, q) => {
+    acc[q.paymentStatus] = (acc[q.paymentStatus] || 0) + 1;
+    return acc;
+  }, {});
+
   return (
     <AdminProtectedRoute>
       <div className="min-h-screen bg-gray-50/60 pb-16">
@@ -303,8 +407,10 @@ export default function BulkQuotesAdminPage() {
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Bulk Order Quotes</h1>
               <p className="text-gray-500 text-sm mt-1">{total} total requests</p>
             </div>
-            <button onClick={() => fetchQuotes(currentPage)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition">
+            <button
+              onClick={() => fetchQuotes(currentPage)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition"
+            >
               <RefreshCw className="w-4 h-4" /> Refresh
             </button>
           </div>
@@ -321,18 +427,21 @@ export default function BulkQuotesAdminPage() {
             </div>
           )}
 
-          {/* ── Stats Strip ── */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          {/* ── Quote Status Stats Strip ── */}
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Quote Status</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
             {STATUS_OPTIONS.map((s) => {
               const cfg = STATUS_CONFIG[s];
               return (
-                <button key={s}
+                <button
+                  key={s}
                   onClick={() => setFilterStatus(filterStatus === s ? "" : s)}
                   className={`p-4 rounded-2xl border text-left transition ${
                     filterStatus === s
                       ? cfg.cls + " shadow-sm"
                       : "bg-white border-gray-100 hover:border-gray-300"
-                  }`}>
+                  }`}
+                >
                   <p className={`text-2xl font-bold ${filterStatus === s ? "" : "text-gray-800"}`}>
                     {counts[s] ?? 0}
                   </p>
@@ -344,20 +453,63 @@ export default function BulkQuotesAdminPage() {
             })}
           </div>
 
-          {/* ── Search + Status Filter ── */}
+          {/* ── Payment Stats Strip ── */}
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Payment Status</p>
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            {(["pending", "paid", "failed"] as Quote["paymentStatus"][]).map((s) => {
+              const cfg = PAYMENT_CONFIG[s];
+              return (
+                <button
+                  key={s}
+                  onClick={() => setFilterPayment(filterPayment === s ? "" : s)}
+                  className={`p-4 rounded-2xl border text-left transition ${
+                    filterPayment === s
+                      ? cfg.cls + " shadow-sm"
+                      : "bg-white border-gray-100 hover:border-gray-300"
+                  }`}
+                >
+                  <p className={`text-2xl font-bold ${filterPayment === s ? "" : "text-gray-800"}`}>
+                    {paymentCounts[s] ?? 0}
+                  </p>
+                  <p className={`text-xs mt-0.5 font-medium ${filterPayment === s ? "" : "text-gray-500"}`}>
+                    {cfg.label}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* ── Search + Filters ── */}
           <div className="flex flex-col sm:flex-row gap-3 mb-6">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input type="text" placeholder="Search by name, email or phone..."
-                value={search} onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none bg-white" />
+              <input
+                type="text"
+                placeholder="Search by name, email or phone..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none bg-white"
+              />
             </div>
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none text-gray-700">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none text-gray-700"
+            >
               <option value="">All Statuses</option>
               {STATUS_OPTIONS.map((s) => (
                 <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
               ))}
+            </select>
+            <select
+              value={filterPayment}
+              onChange={(e) => setFilterPayment(e.target.value)}
+              className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none text-gray-700"
+            >
+              <option value="">All Payments</option>
+              <option value="pending">Unpaid</option>
+              <option value="paid">Paid</option>
+              <option value="failed">Failed</option>
             </select>
           </div>
 
@@ -384,12 +536,12 @@ export default function BulkQuotesAdminPage() {
             </div>
           ) : (
             <>
-              {/* Desktop */}
+              {/* Desktop Table */}
               <div className="hidden md:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-100">
                   <thead className="bg-gray-50">
                     <tr>
-                      {["Customer", "Bulk Pack", "Event", "Qty / Total", "Date", "Status", "Actions"].map((h) => (
+                      {["Customer", "Bulk Pack", "Event", "Qty / Total", "Payment", "Date", "Status", "Actions"].map((h) => (
                         <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                           {h}
                         </th>
@@ -410,8 +562,11 @@ export default function BulkQuotesAdminPage() {
                           {q.bulkOrder ? (
                             <div className="flex items-center gap-2">
                               {q.bulkOrder.imageUrl?.[0]?.url && (
-                                <img src={q.bulkOrder.imageUrl[0].url} alt=""
-                                  className="w-8 h-8 rounded-lg object-cover border flex-shrink-0" />
+                                <img
+                                  src={q.bulkOrder.imageUrl[0].url}
+                                  alt=""
+                                  className="w-8 h-8 rounded-lg object-cover border flex-shrink-0"
+                                />
                               )}
                               <div>
                                 <p className="text-sm font-medium text-gray-900 leading-tight">{q.bulkOrder.name}</p>
@@ -430,16 +585,27 @@ export default function BulkQuotesAdminPage() {
                           <p className="text-sm font-medium text-gray-900">{q.quantity} units</p>
                           <p className="text-xs font-semibold text-orange-500">₹{q.estimatedTotal.toLocaleString("en-IN")}</p>
                         </td>
+                        {/* Payment */}
+                        <td className="px-5 py-4">
+                          <PaymentBadge status={q.paymentStatus} />
+                          {q.razorpayPaymentId && (
+                            <p className="text-xs text-gray-400 font-mono mt-1 max-w-[120px] truncate" title={q.razorpayPaymentId}>
+                              {q.razorpayPaymentId}
+                            </p>
+                          )}
+                        </td>
                         {/* Submitted */}
                         <td className="px-5 py-4 text-xs text-gray-400 whitespace-nowrap">
                           {fmtDate(q.createdAt)}
                         </td>
                         {/* Status */}
                         <td className="px-5 py-4">
-                          <select value={q.status}
+                          <select
+                            value={q.status}
                             onChange={(e) => handleStatusChange(q._id, e.target.value as Quote["status"])}
                             disabled={statusLoading}
-                            className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg border outline-none cursor-pointer transition ${STATUS_CONFIG[q.status].cls}`}>
+                            className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg border outline-none cursor-pointer transition ${STATUS_CONFIG[q.status].cls}`}
+                          >
                             {STATUS_OPTIONS.map((s) => (
                               <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
                             ))}
@@ -448,12 +614,18 @@ export default function BulkQuotesAdminPage() {
                         {/* Actions */}
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-2">
-                            <button onClick={() => setDetailQuote(q)}
-                              className="p-2 rounded-lg bg-gray-50 hover:bg-orange-50 text-gray-500 hover:text-orange-600 transition" title="View details">
+                            <button
+                              onClick={() => setDetailQuote(q)}
+                              className="p-2 rounded-lg bg-gray-50 hover:bg-orange-50 text-gray-500 hover:text-orange-600 transition"
+                              title="View details"
+                            >
                               <Eye className="w-4 h-4" />
                             </button>
-                            <button onClick={() => setDeleteModal({ open: true, id: q._id })}
-                              className="p-2 rounded-lg bg-gray-50 hover:bg-red-50 text-gray-500 hover:text-red-600 transition" title="Delete">
+                            <button
+                              onClick={() => setDeleteModal({ open: true, id: q._id })}
+                              className="p-2 rounded-lg bg-gray-50 hover:bg-red-50 text-gray-500 hover:text-red-600 transition"
+                              title="Delete"
+                            >
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
@@ -473,11 +645,20 @@ export default function BulkQuotesAdminPage() {
                         <p className="font-semibold text-sm text-gray-900">{q.name}</p>
                         <p className="text-xs text-gray-400">{q.phone}</p>
                       </div>
-                      <StatusBadge status={q.status} />
+                      <div className="flex flex-col items-end gap-1">
+                        <StatusBadge status={q.status} />
+                        <PaymentBadge status={q.paymentStatus} />
+                      </div>
                     </div>
                     {q.bulkOrder && (
                       <p className="text-xs text-gray-500 mb-2">
                         Pack: <span className="font-medium text-gray-700">{q.bulkOrder.name}</span>
+                      </p>
+                    )}
+                    {q.razorpayPaymentId && (
+                      <p className="text-xs text-gray-400 font-mono mb-2 truncate">
+                        <span className="text-gray-500 font-sans">Payment ID: </span>
+                        {q.razorpayPaymentId}
                       </p>
                     )}
                     <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
@@ -486,12 +667,16 @@ export default function BulkQuotesAdminPage() {
                       <span className="flex items-center gap-1"><CalendarDays className="w-3.5 h-3.5" />{fmtDate(q.eventDate)}</span>
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => setDetailQuote(q)}
-                        className="flex-1 py-2 bg-orange-500 text-white text-sm font-semibold rounded-xl">
+                      <button
+                        onClick={() => setDetailQuote(q)}
+                        className="flex-1 py-2 bg-orange-500 text-white text-sm font-semibold rounded-xl"
+                      >
                         View Details
                       </button>
-                      <button onClick={() => setDeleteModal({ open: true, id: q._id })}
-                        className="px-4 py-2 bg-red-50 text-red-600 text-sm font-semibold rounded-xl">
+                      <button
+                        onClick={() => setDeleteModal({ open: true, id: q._id })}
+                        className="px-4 py-2 bg-red-50 text-red-600 text-sm font-semibold rounded-xl"
+                      >
                         Delete
                       </button>
                     </div>
@@ -502,9 +687,11 @@ export default function BulkQuotesAdminPage() {
               {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-2 mt-8">
-                  <button disabled={currentPage === 1}
+                  <button
+                    disabled={currentPage === 1}
                     onClick={() => setCurrentPage((p) => p - 1)}
-                    className="p-2 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                    className="p-2 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
 
@@ -519,20 +706,25 @@ export default function BulkQuotesAdminPage() {
                       p === "..." ? (
                         <span key={`e-${i}`} className="px-1 text-gray-400 text-sm">…</span>
                       ) : (
-                        <button key={p} onClick={() => setCurrentPage(p as number)}
+                        <button
+                          key={p}
+                          onClick={() => setCurrentPage(p as number)}
                           className={`w-9 h-9 rounded-xl text-sm font-medium transition ${
                             currentPage === p
                               ? "bg-orange-500 text-white shadow-sm"
                               : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
-                          }`}>
+                          }`}
+                        >
                           {p}
                         </button>
                       )
                     )}
 
-                  <button disabled={currentPage === totalPages}
+                  <button
+                    disabled={currentPage === totalPages}
                     onClick={() => setCurrentPage((p) => p + 1)}
-                    className="p-2 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                    className="p-2 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  >
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -560,12 +752,16 @@ export default function BulkQuotesAdminPage() {
             <h3 className="text-lg font-bold text-gray-900 mb-2">Delete this quote?</h3>
             <p className="text-gray-500 text-sm mb-6">This action cannot be undone.</p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteModal({ open: false, id: null })}
-                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl font-semibold text-sm text-gray-700 transition">
+              <button
+                onClick={() => setDeleteModal({ open: false, id: null })}
+                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl font-semibold text-sm text-gray-700 transition"
+              >
                 Cancel
               </button>
-              <button onClick={confirmDelete}
-                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold text-sm transition">
+              <button
+                onClick={confirmDelete}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold text-sm transition"
+              >
                 Yes, Delete
               </button>
             </div>
