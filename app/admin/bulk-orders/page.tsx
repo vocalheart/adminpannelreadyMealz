@@ -41,12 +41,12 @@ interface Quote {
 /* ─── Status config ──────────────────────────── */
 const STATUS_CONFIG: Record<
   Quote["status"],
-  { label: string; cls: string; dot: string }
+  { label: string; cls: string; dot: string; ring: string }
 > = {
-  pending:   { label: "Pending",   cls: "bg-yellow-50 text-yellow-700 border-yellow-200", dot: "bg-yellow-400" },
-  contacted: { label: "Contacted", cls: "bg-blue-50 text-blue-700 border-blue-200",       dot: "bg-blue-400"   },
-  confirmed: { label: "Confirmed", cls: "bg-green-50 text-green-700 border-green-200",    dot: "bg-green-500"  },
-  cancelled: { label: "Cancelled", cls: "bg-red-50 text-red-600 border-red-200",          dot: "bg-red-400"    },
+  pending:   { label: "Pending",   cls: "bg-yellow-50 text-yellow-700 border-yellow-200", dot: "bg-yellow-400", ring: "ring-yellow-300" },
+  contacted: { label: "Contacted", cls: "bg-blue-50 text-blue-700 border-blue-200",       dot: "bg-blue-400",   ring: "ring-blue-300"   },
+  confirmed: { label: "Confirmed", cls: "bg-green-50 text-green-700 border-green-200",    dot: "bg-green-500",  ring: "ring-green-300"  },
+  cancelled: { label: "Cancelled", cls: "bg-red-50 text-red-600 border-red-200",          dot: "bg-red-400",    ring: "ring-red-300"    },
 };
 
 /* ─── Payment Status config ──────────────────── */
@@ -108,7 +108,61 @@ function PaymentBadge({ status }: { status: Quote["paymentStatus"] }) {
   );
 }
 
-/* ─── Detail Modal ───────────────────────────── */
+/* ─── Section Heading ────────────────────────── */
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 mb-3">
+      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest whitespace-nowrap">
+        {children}
+      </p>
+      <div className="flex-1 h-px bg-gray-100" />
+    </div>
+  );
+}
+
+/* ─── InfoCell ───────────────────────────────── */
+function InfoCell({
+  icon, label, value, accent,
+}: {
+  icon: React.ReactNode; label: string; value: string; accent?: boolean;
+}) {
+  return (
+    <div className="flex items-start gap-3 bg-gray-50 rounded-xl p-3">
+      <span className="text-gray-400 mt-0.5 shrink-0">{icon}</span>
+      <div className="min-w-0">
+        <p className="text-[11px] text-gray-400 uppercase tracking-wide font-medium">{label}</p>
+        <p className={`text-sm mt-0.5 font-semibold break-words ${accent ? "text-orange-500" : "text-gray-800"}`}>
+          {value}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ─── MonoCell ───────────────────────────────── */
+function MonoCell({
+  icon, label, value, accent,
+}: {
+  icon: React.ReactNode; label: string; value?: string; accent?: boolean;
+}) {
+  return (
+    <div className="flex items-start gap-3 bg-gray-50 rounded-xl p-3">
+      <span className="text-gray-400 mt-0.5 shrink-0">{icon}</span>
+      <div className="min-w-0">
+        <p className="text-[11px] text-gray-400 uppercase tracking-wide font-medium">{label}</p>
+        {value ? (
+          <p className={`text-xs font-mono mt-0.5 break-all ${accent ? "text-emerald-700 font-semibold" : "text-gray-700"}`}>
+            {value}
+          </p>
+        ) : (
+          <p className="text-xs text-gray-400 italic mt-0.5">Not available</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Detail Modal (Improved) ────────────────── */
 function DetailModal({
   quote,
   onClose,
@@ -120,17 +174,36 @@ function DetailModal({
   onStatusChange: (id: string, status: Quote["status"]) => void;
   statusLoading: boolean;
 }) {
+  // Lock body scroll on mount
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white rounded-2xl w-full max-w-2xl my-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      {/* Modal sheet */}
+      <div
+        className="
+          relative bg-white w-full sm:max-w-2xl
+          rounded-t-3xl sm:rounded-2xl
+          shadow-2xl overflow-hidden
+          flex flex-col
+          max-h-[92dvh] sm:max-h-[88vh]
+        "
+        style={{ animation: "modalSlideUp 0.22s ease-out" }}
+        onClick={(e) => e.stopPropagation()}
+      >
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10">
+        {/* ── Sticky Header ── */}
+        <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-4 border-b border-gray-100 bg-white shrink-0">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Quote Details</h2>
+            <h2 className="text-lg font-bold text-gray-900 leading-tight">Quote Details</h2>
             <p className="text-xs text-gray-400 mt-0.5">Submitted {fmtDateTime(quote.createdAt)}</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
@@ -138,117 +211,114 @@ function DetailModal({
             <StatusBadge status={quote.status} />
             <button
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition text-xl"
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 text-lg font-bold transition ml-1 shrink-0"
+              aria-label="Close"
             >×</button>
           </div>
         </div>
 
-        <div className="px-6 py-5 space-y-5">
+        {/* ── Scrollable Content ── */}
+        <div className="overflow-y-auto overscroll-contain flex-1 px-5 py-5 space-y-6">
 
           {/* Bulk Order Pack */}
           {quote.bulkOrder && (
-            <div className="flex items-center gap-3 p-3 bg-orange-50 border border-orange-100 rounded-xl">
+            <div className="flex items-center gap-4 p-4 bg-orange-50 border border-orange-100 rounded-2xl">
               {quote.bulkOrder.imageUrl?.[0]?.url ? (
                 <img
                   src={quote.bulkOrder.imageUrl[0].url}
                   alt={quote.bulkOrder.name}
-                  className="w-12 h-12 rounded-lg object-cover border border-orange-200 flex-shrink-0"
+                  className="w-14 h-14 rounded-xl object-cover border-2 border-orange-200 shrink-0"
                 />
               ) : (
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center text-2xl flex-shrink-0">🍽️</div>
+                <div className="w-14 h-14 bg-orange-100 rounded-xl flex items-center justify-center text-3xl shrink-0">
+                  🍽️
+                </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 truncate">{quote.bulkOrder.name}</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-sm font-bold text-gray-900 truncate">{quote.bulkOrder.name}</p>
+                <p className="text-xs text-gray-500 mt-0.5">
                   ₹{quote.bulkOrder.price.toLocaleString("en-IN")} / unit
-                  {quote.bulkOrder.category && <span className="ml-2 capitalize">· {quote.bulkOrder.category}</span>}
+                  {quote.bulkOrder.category && (
+                    <span className="ml-1.5 capitalize">· {quote.bulkOrder.category}</span>
+                  )}
                 </p>
               </div>
               <div className="text-right shrink-0">
-                <p className="text-xs text-gray-400">Estimated</p>
-                <p className="text-base font-bold text-orange-500">₹{quote.estimatedTotal.toLocaleString("en-IN")}</p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide">Estimated</p>
+                <p className="text-xl font-extrabold text-orange-500 leading-tight">
+                  ₹{quote.estimatedTotal.toLocaleString("en-IN")}
+                </p>
               </div>
             </div>
           )}
 
-          {/* Customer Info */}
+          {/* Customer Information */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Customer Information</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <InfoRow icon={<Users className="w-4 h-4" />}    label="Name"    value={quote.name} />
-              <InfoRow icon={<Mail className="w-4 h-4" />}     label="Email"   value={quote.email} />
-              <InfoRow icon={<Phone className="w-4 h-4" />}    label="Phone"   value={quote.phone} />
+            <SectionHeading>Customer Information</SectionHeading>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <InfoCell icon={<Users className="w-4 h-4" />}    label="Name"    value={quote.name} />
+              <InfoCell icon={<Mail className="w-4 h-4" />}     label="Email"   value={quote.email} />
+              <InfoCell icon={<Phone className="w-4 h-4" />}    label="Phone"   value={quote.phone} />
               {quote.company && (
-                <InfoRow icon={<Building2 className="w-4 h-4" />} label="Company" value={quote.company} />
+                <InfoCell icon={<Building2 className="w-4 h-4" />} label="Company" value={quote.company} />
               )}
             </div>
           </div>
 
           {/* Event Details */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Event Details</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <InfoRow icon={<Package className="w-4 h-4" />}      label="Event Type" value={quote.eventType} />
-              <InfoRow icon={<CalendarDays className="w-4 h-4" />} label="Event Date" value={fmtDate(quote.eventDate)} />
-              <InfoRow icon={<Users className="w-4 h-4" />}        label="Quantity"   value={`${quote.quantity} units`} />
-              <InfoRow icon={<IndianRupee className="w-4 h-4" />}  label="Est. Total" value={`₹${quote.estimatedTotal.toLocaleString("en-IN")}`} bold />
+            <SectionHeading>Event Details</SectionHeading>
+            <div className="grid grid-cols-2 gap-2.5">
+              <InfoCell icon={<Package className="w-4 h-4" />}      label="Event Type" value={quote.eventType} />
+              <InfoCell icon={<CalendarDays className="w-4 h-4" />} label="Event Date" value={fmtDate(quote.eventDate)} />
+              <InfoCell icon={<Users className="w-4 h-4" />}        label="Quantity"   value={`${quote.quantity} units`} />
+              <InfoCell icon={<IndianRupee className="w-4 h-4" />}  label="Est. Total" value={`₹${quote.estimatedTotal.toLocaleString("en-IN")}`} accent />
             </div>
           </div>
 
-          {/* Payment Info */}
+          {/* Payment Information */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Payment Information</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Payment Status display */}
-              <div className="flex items-start gap-2 bg-gray-50 rounded-xl p-3">
-                <span className="text-gray-400 mt-0.5 shrink-0"><CreditCard className="w-4 h-4" /></span>
+            <SectionHeading>Payment Information</SectionHeading>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Payment status highlight card */}
+              <div className={`flex items-center gap-3 rounded-xl p-3.5 border ${PAYMENT_CONFIG[quote.paymentStatus].cls}`}>
+                <CreditCard className="w-4 h-4 shrink-0" />
                 <div>
-                  <p className="text-xs text-gray-400">Payment Status</p>
-                  <div className="mt-1">
-                    <PaymentBadge status={quote.paymentStatus} />
-                  </div>
+                  <p className="text-[11px] uppercase tracking-wide font-medium opacity-70">Payment Status</p>
+                  <p className="text-sm font-bold mt-0.5">{PAYMENT_CONFIG[quote.paymentStatus].label}</p>
                 </div>
               </div>
 
-              {/* Razorpay Order ID */}
-              <div className="flex items-start gap-2 bg-gray-50 rounded-xl p-3">
-                <span className="text-gray-400 mt-0.5 shrink-0"><Hash className="w-4 h-4" /></span>
-                <div className="min-w-0">
-                  <p className="text-xs text-gray-400">Razorpay Order ID</p>
-                  {quote.razorpayOrderId ? (
-                    <p className="text-xs font-mono font-medium text-gray-700 mt-0.5 break-all">{quote.razorpayOrderId}</p>
-                  ) : (
-                    <p className="text-xs text-gray-400 mt-0.5 italic">Not generated</p>
-                  )}
-                </div>
-              </div>
+              <MonoCell
+                icon={<Hash className="w-4 h-4" />}
+                label="Razorpay Order ID"
+                value={quote.razorpayOrderId}
+              />
 
-              {/* Razorpay Payment ID */}
-              <div className="flex items-start gap-2 bg-gray-50 rounded-xl p-3 sm:col-span-2">
-                <span className="text-gray-400 mt-0.5 shrink-0"><ShieldCheck className="w-4 h-4" /></span>
-                <div className="min-w-0">
-                  <p className="text-xs text-gray-400">Razorpay Payment ID</p>
-                  {quote.razorpayPaymentId ? (
-                    <p className="text-xs font-mono font-medium text-emerald-700 mt-0.5 break-all">{quote.razorpayPaymentId}</p>
-                  ) : (
-                    <p className="text-xs text-gray-400 mt-0.5 italic">Not captured</p>
-                  )}
-                </div>
+              <div className="sm:col-span-2">
+                <MonoCell
+                  icon={<ShieldCheck className="w-4 h-4" />}
+                  label="Razorpay Payment ID"
+                  value={quote.razorpayPaymentId}
+                  accent
+                />
               </div>
             </div>
           </div>
 
-          {/* Requirements */}
+          {/* Additional Requirements */}
           {quote.requirements && (
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Additional Requirements</p>
-              <p className="text-sm text-gray-700 bg-gray-50 rounded-xl p-3 leading-relaxed">{quote.requirements}</p>
+              <SectionHeading>Additional Requirements</SectionHeading>
+              <p className="text-sm text-gray-700 bg-gray-50 border border-gray-100 rounded-xl p-4 leading-relaxed">
+                {quote.requirements}
+              </p>
             </div>
           )}
 
-          {/* Status update */}
+          {/* Update Status */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Update Quote Status</p>
+            <SectionHeading>Update Quote Status</SectionHeading>
             <div className="flex flex-wrap gap-2">
               {STATUS_OPTIONS.map((s) => {
                 const cfg = STATUS_CONFIG[s];
@@ -258,39 +328,41 @@ function DetailModal({
                     key={s}
                     disabled={statusLoading || isActive}
                     onClick={() => onStatusChange(quote._id, s)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
-                      isActive
-                        ? cfg.cls + " cursor-default"
-                        : "bg-white border-gray-200 text-gray-600 hover:border-gray-400"
-                    } disabled:opacity-60`}
+                    className={`
+                      flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border transition
+                      ${isActive
+                        ? `${cfg.cls} ring-2 ${cfg.ring} cursor-default shadow-sm`
+                        : "bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:shadow-sm"
+                      }
+                      disabled:opacity-60
+                    `}
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+                    <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
                     {cfg.label}
+                    {isActive && <CheckCircle className="w-3.5 h-3.5 ml-0.5" />}
                   </button>
                 );
               })}
             </div>
           </div>
 
+          {/* Safe-area bottom padding for iOS */}
+          <div className="h-safe-bottom pb-4" />
         </div>
       </div>
-    </div>
-  );
-}
 
-/* ─── InfoRow ────────────────────────────────── */
-function InfoRow({
-  icon, label, value, bold,
-}: {
-  icon: React.ReactNode; label: string; value: string; bold?: boolean;
-}) {
-  return (
-    <div className="flex items-start gap-2 bg-gray-50 rounded-xl p-3">
-      <span className="text-gray-400 mt-0.5 shrink-0">{icon}</span>
-      <div>
-        <p className="text-xs text-gray-400">{label}</p>
-        <p className={`text-sm mt-0.5 ${bold ? "font-bold text-orange-500" : "text-gray-800 font-medium"}`}>{value}</p>
-      </div>
+      <style>{`
+        @keyframes modalSlideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @media (max-width: 639px) {
+          @keyframes modalSlideUp {
+            from { opacity: 0; transform: translateY(100%); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -304,15 +376,15 @@ export default function BulkQuotesAdminPage() {
   const [totalPages, setTotalPages]   = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const [search, setSearch]                     = useState("");
-  const [filterStatus, setFilterStatus]         = useState<string>("");
-  const [filterPayment, setFilterPayment]       = useState<string>("");
-  const [loading, setLoading]                   = useState(false);
-  const [statusLoading, setStatusLoading]       = useState(false);
-  const [message, setMessage]                   = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [search, setSearch]               = useState("");
+  const [filterStatus, setFilterStatus]   = useState<string>("");
+  const [filterPayment, setFilterPayment] = useState<string>("");
+  const [loading, setLoading]             = useState(false);
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [message, setMessage]             = useState<{ text: string; type: "success" | "error" } | null>(null);
 
-  const [detailQuote, setDetailQuote]   = useState<Quote | null>(null);
-  const [deleteModal, setDeleteModal]   = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
+  const [detailQuote, setDetailQuote] = useState<Quote | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
 
   const LIMIT = 12;
 
@@ -326,9 +398,9 @@ export default function BulkQuotesAdminPage() {
     setLoading(true);
     try {
       const params: Record<string, any> = { page, limit: LIMIT };
-      if (search.trim())   params.search        = search.trim();
-      if (filterStatus)    params.status        = filterStatus;
-      if (filterPayment)   params.paymentStatus = filterPayment;
+      if (search.trim())  params.search        = search.trim();
+      if (filterStatus)   params.status        = filterStatus;
+      if (filterPayment)  params.paymentStatus = filterPayment;
 
       const res = await api.get("/bulk-quotes", { params });
       if (res.data.success) {
@@ -385,12 +457,11 @@ export default function BulkQuotesAdminPage() {
     }
   };
 
-  /* ── Status counts (from current loaded data) ── */
+  /* ── Counts ── */
   const counts = quotes.reduce<Record<string, number>>((acc, q) => {
     acc[q.status] = (acc[q.status] || 0) + 1;
     return acc;
   }, {});
-
   const paymentCounts = quotes.reduce<Record<string, number>>((acc, q) => {
     acc[q.paymentStatus] = (acc[q.paymentStatus] || 0) + 1;
     return acc;
@@ -427,7 +498,7 @@ export default function BulkQuotesAdminPage() {
             </div>
           )}
 
-          {/* ── Quote Status Stats Strip ── */}
+          {/* ── Quote Status Stats ── */}
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Quote Status</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
             {STATUS_OPTIONS.map((s) => {
@@ -437,9 +508,7 @@ export default function BulkQuotesAdminPage() {
                   key={s}
                   onClick={() => setFilterStatus(filterStatus === s ? "" : s)}
                   className={`p-4 rounded-2xl border text-left transition ${
-                    filterStatus === s
-                      ? cfg.cls + " shadow-sm"
-                      : "bg-white border-gray-100 hover:border-gray-300"
+                    filterStatus === s ? cfg.cls + " shadow-sm" : "bg-white border-gray-100 hover:border-gray-300"
                   }`}
                 >
                   <p className={`text-2xl font-bold ${filterStatus === s ? "" : "text-gray-800"}`}>
@@ -453,7 +522,7 @@ export default function BulkQuotesAdminPage() {
             })}
           </div>
 
-          {/* ── Payment Stats Strip ── */}
+          {/* ── Payment Stats ── */}
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Payment Status</p>
           <div className="grid grid-cols-3 gap-3 mb-6">
             {(["pending", "paid", "failed"] as Quote["paymentStatus"][]).map((s) => {
@@ -463,9 +532,7 @@ export default function BulkQuotesAdminPage() {
                   key={s}
                   onClick={() => setFilterPayment(filterPayment === s ? "" : s)}
                   className={`p-4 rounded-2xl border text-left transition ${
-                    filterPayment === s
-                      ? cfg.cls + " shadow-sm"
-                      : "bg-white border-gray-100 hover:border-gray-300"
+                    filterPayment === s ? cfg.cls + " shadow-sm" : "bg-white border-gray-100 hover:border-gray-300"
                   }`}
                 >
                   <p className={`text-2xl font-bold ${filterPayment === s ? "" : "text-gray-800"}`}>
@@ -513,7 +580,7 @@ export default function BulkQuotesAdminPage() {
             </select>
           </div>
 
-          {/* ── Table ── */}
+          {/* ── Table / Cards ── */}
           {loading ? (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               {[...Array(6)].map((_, i) => (
@@ -551,22 +618,16 @@ export default function BulkQuotesAdminPage() {
                   <tbody className="divide-y divide-gray-100">
                     {quotes.map((q) => (
                       <tr key={q._id} className="hover:bg-orange-50/20 transition">
-                        {/* Customer */}
                         <td className="px-5 py-4">
                           <p className="text-sm font-semibold text-gray-900">{q.name}</p>
                           <p className="text-xs text-gray-400">{q.email}</p>
                           <p className="text-xs text-gray-400">{q.phone}</p>
                         </td>
-                        {/* Bulk Pack */}
                         <td className="px-5 py-4">
                           {q.bulkOrder ? (
                             <div className="flex items-center gap-2">
                               {q.bulkOrder.imageUrl?.[0]?.url && (
-                                <img
-                                  src={q.bulkOrder.imageUrl[0].url}
-                                  alt=""
-                                  className="w-8 h-8 rounded-lg object-cover border flex-shrink-0"
-                                />
+                                <img src={q.bulkOrder.imageUrl[0].url} alt="" className="w-8 h-8 rounded-lg object-cover border shrink-0" />
                               )}
                               <div>
                                 <p className="text-sm font-medium text-gray-900 leading-tight">{q.bulkOrder.name}</p>
@@ -575,17 +636,14 @@ export default function BulkQuotesAdminPage() {
                             </div>
                           ) : <span className="text-xs text-gray-400">—</span>}
                         </td>
-                        {/* Event */}
                         <td className="px-5 py-4">
                           <p className="text-sm text-gray-700">{q.eventType}</p>
                           <p className="text-xs text-gray-400">{fmtDate(q.eventDate)}</p>
                         </td>
-                        {/* Qty / Total */}
                         <td className="px-5 py-4">
                           <p className="text-sm font-medium text-gray-900">{q.quantity} units</p>
                           <p className="text-xs font-semibold text-orange-500">₹{q.estimatedTotal.toLocaleString("en-IN")}</p>
                         </td>
-                        {/* Payment */}
                         <td className="px-5 py-4">
                           <PaymentBadge status={q.paymentStatus} />
                           {q.razorpayPaymentId && (
@@ -594,11 +652,9 @@ export default function BulkQuotesAdminPage() {
                             </p>
                           )}
                         </td>
-                        {/* Submitted */}
                         <td className="px-5 py-4 text-xs text-gray-400 whitespace-nowrap">
                           {fmtDate(q.createdAt)}
                         </td>
-                        {/* Status */}
                         <td className="px-5 py-4">
                           <select
                             value={q.status}
@@ -611,7 +667,6 @@ export default function BulkQuotesAdminPage() {
                             ))}
                           </select>
                         </td>
-                        {/* Actions */}
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-2">
                             <button
