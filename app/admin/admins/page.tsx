@@ -115,7 +115,7 @@ export default function AdminManagement() {
     } else if (form.password.length < 6) {
       errors.password = "Password must be at least 6 characters";
       valid = false;
-    }
+    }          
 
     setFormErrors(errors);
     return valid;

@@ -87,7 +87,7 @@ export default function AdminAdsPage() {
         startDate: ad.startDate ? ad.startDate.split("T")[0] : "",
         endDate: ad.endDate ? ad.endDate.split("T")[0] : "",
         priority: ad.priority,
-        isActive: ad.isActive,
+        isActive: ad.isActive,           
       });
       setImagePreview(ad.image);
     } else {
