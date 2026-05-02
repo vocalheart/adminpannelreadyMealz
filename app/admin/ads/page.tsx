@@ -154,7 +154,6 @@ export default function AdminAdsPage() {
   // Delete Ad
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this advertisement?")) return;
-
     try {
       await api.delete(`/admin/ads/${id}`);
       toast.success("Advertisement deleted");
@@ -202,8 +201,7 @@ export default function AdminAdsPage() {
                     ad.isActive
                       ? "bg-green-100 text-green-700"
                       : "bg-red-100 text-red-700"
-                  }`}
-                >
+                  }`}>
                   {ad.isActive ? "Active" : "Inactive"}
                 </div>
               </div>
@@ -233,7 +231,6 @@ export default function AdminAdsPage() {
                     {ad.link.length > 40 ? ad.link.substring(0, 37) + "..." : ad.link}
                   </a>
                 )}
-
                 <div className="flex gap-2 mt-5">
                   <button
                     onClick={() => openModal(ad)}

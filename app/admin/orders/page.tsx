@@ -2,10 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import api from "../../lib/axios";
-import {
-  Package, ChevronDown, ChevronUp, Search, Filter,
-  Clock, CheckCircle2, XCircle, Truck, ChefHat,
-  CreditCard, Banknote, RefreshCw, MapPin, Phone,
+import {Package, ChevronDown, ChevronUp, Search, Filter,Clock, CheckCircle2, XCircle, Truck, ChefHat,CreditCard, Banknote, RefreshCw, MapPin, Phone,
   User, Receipt, ShoppingBag, TrendingUp, AlertCircle,
   CheckCheck, RotateCcw, Loader2, IndianRupee, Calendar,
   BadgeCheck, Timer, ReceiptText, Pencil, ChevronRight
@@ -69,17 +66,15 @@ const fmt  = (n:number) => `₹${Number(n||0).toFixed(2)}`;
 const fmtK = (n:number) => n >= 1000 ? `₹${(n/1000).toFixed(1)}k` : fmt(n);
 const fmtD = (d:string) => new Date(d).toLocaleString("en-IN",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
 const fmtDShort = (d:string) => new Date(d).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
-
 /* ─── Badges ──────────────────────────────────────────────────── */
 function SBadge({status}:{status:string}) {
   const c = S[status]??S.placed;
   return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap" style={{color:c.color,background:c.bg}}>{c.icon}{c.label}</span>;
-}
+};
 function PBadge({status}:{status:string}) {
   const c = PS[status]??PS.pending;
   return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold" style={{color:c.color,background:c.bg}}>{c.label}</span>;
-}
-
+};
 /* ─── Stat Card ───────────────────────────────────────────────── */
 function StatCard({icon,label,value,sub,color,active}:{icon:React.ReactNode;label:string;value:string|number;sub?:string;color:string;active?:boolean}) {
   return (
@@ -95,8 +90,7 @@ function StatCard({icon,label,value,sub,color,active}:{icon:React.ReactNode;labe
       </div>
     </div>
   );
-}
-
+};
 /* ─── Order Card ──────────────────────────────────────────────── */
 function OrderCard({order,onStatusChange,onPaymentChange,onRefund,onSetDeliveryTime,updating}:{
   order:Order;
@@ -116,10 +110,8 @@ function OrderCard({order,onStatusChange,onPaymentChange,onRefund,onSetDeliveryT
   const [refundStatus, setRefundStatus] = useState(order.refundStatus||"pending");
   const [refundNote, setRefundNote] = useState("");
   const [deliveryTime, setDeliveryTime] = useState(order.estimatedDeliveryTime ? new Date(order.estimatedDeliveryTime).toISOString().slice(0,16) : "");
-
   const locked = ["delivered","cancelled","returned"].includes(order.orderStatus);
   const isUpdating = updating === order._id;
-
   const TABS = [
     {id:"details",   label:"Details",  icon:<ReceiptText className="w-3.5 h-3.5"/>},
     {id:"status",    label:"Status",   icon:<Pencil className="w-3.5 h-3.5"/>},
@@ -127,18 +119,14 @@ function OrderCard({order,onStatusChange,onPaymentChange,onRefund,onSetDeliveryT
     {id:"refund",    label:"Refund",   icon:<RotateCcw className="w-3.5 h-3.5"/>},
     {id:"delivery",  label:"Delivery", icon:<Timer className="w-3.5 h-3.5"/>},
   ];
-
   return (
     <div className="bg-white border rounded-2xl overflow-hidden transition-all"
       style={{borderColor: open?"#fed7aa":"#f0f0f0", boxShadow: open?"0 8px 28px rgba(0,0,0,0.08)":"0 1px 4px rgba(0,0,0,0.04)"}}>
-
       {/* ── Header row ── */}
       <div className="flex items-center gap-3 px-4 py-3.5 cursor-pointer hover:bg-orange-50/30 transition-colors select-none"
         onClick={()=>setOpen(v=>!v)}>
-
         {/* Status dot */}
         <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{background: S[order.orderStatus]?.dot||"#ccc"}} />
-
         {/* Order num + date */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -148,27 +136,22 @@ function OrderCard({order,onStatusChange,onPaymentChange,onRefund,onSetDeliveryT
           </div>
           <p className="text-xs text-gray-400 mt-0.5">{fmtD(order.createdAt)}</p>
         </div>
-
         {/* Customer */}
         <div className="hidden sm:block w-32 min-w-0">
           <p className="text-sm font-semibold text-gray-700 truncate">{order.user.name}</p>
           <p className="text-xs text-gray-400 truncate">{order.deliveryAddress?.city}</p>
         </div>
-
         {/* Items */}
         <div className="hidden md:flex items-center gap-1 text-xs text-gray-500 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-100">
           <ShoppingBag className="w-3 h-3"/>{order.items.length}
         </div>
-
         {/* Amount */}
         <div className="text-right shrink-0">
           <p className="text-sm font-bold text-gray-900">{fmt(order.orderTotal)}</p>
           <p className="text-xs text-gray-400">{PM[order.paymentMethod]||order.paymentMethod}</p>
         </div>
-
         <span className="text-gray-400 shrink-0 ml-1">{open?<ChevronUp className="w-4 h-4"/>:<ChevronDown className="w-4 h-4"/>}</span>
       </div>
-
       {/* ── Expanded body ── */}
       {open && (
         <div className="border-t border-orange-100">
@@ -181,8 +164,7 @@ function OrderCard({order,onStatusChange,onPaymentChange,onRefund,onSetDeliveryT
                 {t.icon}{t.label}
               </button>
             ))}
-          </div>
-
+          </div>       
           <div className="p-4">
             {/* ══ DETAILS TAB ══ */}
             {tab==="details" && (
@@ -201,7 +183,6 @@ function OrderCard({order,onStatusChange,onPaymentChange,onRefund,onSetDeliveryT
                       </div>
                     ))}
                   </div>
-
                   {/* Bill */}
                   <div className="mt-3 bg-gray-50 rounded-xl border border-gray-100 p-3 space-y-1.5 text-xs">
                     {[["Subtotal",fmt(order.subtotal)],["Tax",fmt(order.tax)],["Delivery",fmt(order.deliveryCharge)],
@@ -214,7 +195,6 @@ function OrderCard({order,onStatusChange,onPaymentChange,onRefund,onSetDeliveryT
                     </div>
                   </div>
                 </div>
-
                 {/* Address + History */}
                 <div className="space-y-3">
                   <div>
@@ -230,7 +210,6 @@ function OrderCard({order,onStatusChange,onPaymentChange,onRefund,onSetDeliveryT
                       </div>
                     </div>
                   </div>
-
                   {(order.notes||order.specialRequests) && (
                     <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 space-y-1 text-xs">
                       {order.notes && <p className="text-amber-700"><b>Note:</b> {order.notes}</p>}
@@ -269,7 +248,6 @@ function OrderCard({order,onStatusChange,onPaymentChange,onRefund,onSetDeliveryT
                 </div>
               </div>
             )}
-
             {/* ══ STATUS TAB ══ */}
             {tab==="status" && (
               <div className="max-w-sm space-y-4">
@@ -302,7 +280,6 @@ function OrderCard({order,onStatusChange,onPaymentChange,onRefund,onSetDeliveryT
                 )}
               </div>
             )}
-
             {/* ══ PAYMENT TAB ══ */}
             {tab==="payment" && (
               <div className="max-w-sm space-y-4">
@@ -334,8 +311,7 @@ function OrderCard({order,onStatusChange,onPaymentChange,onRefund,onSetDeliveryT
                   {isUpdating?<><Loader2 className="w-4 h-4 animate-spin"/>Updating…</>:<><CreditCard className="w-4 h-4"/>Update Payment</>}
                 </button>
               </div>
-            )}
-
+            )};
             {/* ══ REFUND TAB ══ */}
             {tab==="refund" && (
               <div className="max-w-sm space-y-4">
@@ -370,8 +346,7 @@ function OrderCard({order,onStatusChange,onPaymentChange,onRefund,onSetDeliveryT
                   {isUpdating?<><Loader2 className="w-4 h-4 animate-spin"/>Processing…</>:<><RotateCcw className="w-4 h-4"/>Process Refund</>}
                 </button>
               </div>
-            )}
-
+            )};
             {/* ══ DELIVERY TIME TAB ══ */}
             {tab==="delivery" && (
               <div className="max-w-sm space-y-4">
@@ -386,7 +361,7 @@ function OrderCard({order,onStatusChange,onPaymentChange,onRefund,onSetDeliveryT
                     <p className="font-bold mb-0.5">Actual Delivery</p>
                     <p>{fmtD(order.actualDeliveryTime)}</p>
                   </div>
-                )}
+                )};
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Set Estimated Delivery Time</label>
                   <input type="datetime-local" value={deliveryTime} onChange={e=>setDeliveryTime(e.target.value)}
